@@ -58,8 +58,27 @@ enum v4l2_mpeg_video_av1_profile {
 };
 #endif
 
+// Auto-generated for dlopen libv4l2 libraries
+#include "media/gpu/v4l2/v4l2_stubs.h"
+#include "third_party/v4l-utils/lib/include/libv4l2.h"
+
+using media_gpu_v4l2::InitializeStubs;
+using media_gpu_v4l2::kModuleV4l2;
+using media_gpu_v4l2::StubPathMap;
+
+inline static constexpr char kLibV4l2Path[] =
+#if defined(__aarch64__)
+      "/usr/lib64/libv4l2.so";
+#else
+      "/usr/lib/libv4l2.so";
+#endif
+
+static bool use_libv4l2_ = false;
+
 namespace {
 int HandledIoctl(int fd, int request, void* arg) {
+  if (use_libv4l2_)
+    return HANDLE_EINTR(v4l2_ioctl(fd, request, arg));
   return HANDLE_EINTR(ioctl(fd, request, arg));
 }
 
@@ -596,12 +615,28 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
   }
 #endif
 
+  StubPathMap paths;
+  paths[kModuleV4l2].push_back(kLibV4l2Path);
+
+  static bool libv4l2_initialized = InitializeStubs(paths);
+  if (!libv4l2_initialized)
+    VLOGF(1) << "Failed to initialize LIBV4L2 libs";
+
   for (const auto& path : candidate_paths) {
     base::ScopedFD device_fd(
         HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC)));
     if (!device_fd.is_valid()) {
       PLOG(WARNING) << "Could not open " << path;
       continue;
+    }
+
+    use_libv4l2_ = false;
+    if (libv4l2_initialized) {
+      if (HANDLE_EINTR(v4l2_fd_open(device_fd.get(), V4L2_DISABLE_CONVERSION)) !=
+          -1) {
+        DVLOGF(3) << "Using libv4l2 for " << path;
+        use_libv4l2_ = true;
+      }
     }
 
     std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
@@ -630,6 +665,10 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
             /*require_encrypted=*/false));
       }
     }
+
+    if (use_libv4l2_ && device_fd.is_valid())
+      v4l2_close(device_fd.release());
+    device_fd.reset();
   }
 
 #if DCHECK_IS_ON()
