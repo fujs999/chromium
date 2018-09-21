@@ -35,6 +35,7 @@
 #include <vector>
 
 #include "third_party/blink/public/platform/web_string.h"
+#include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 
 namespace blink {
 
@@ -74,6 +75,8 @@ struct WebWindowFeatures {
   // TODO(apaseltiner): Investigate moving this field to a non-public struct
   // since it is only needed within //third_party/blink.
   std::optional<std::vector<WebString>> attribution_srcs;
+
+  String raw_features;
 };
 
 }  // namespace blink
