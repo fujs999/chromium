@@ -4,15 +4,20 @@
 
 #include "base/process/process_info.h"
 
+#include "electron/mas.h"
+
 #import <AppKit/AppKit.h>
 #include <unistd.h>
 
+#if !IS_MAS_BUILD()
 extern "C" {
 pid_t responsibility_get_pid_responsible_for_pid(pid_t);
 }
+#endif
 
 namespace {
 
+#if !IS_MAS_BUILD()
 bool AppContainsBluetoothUsageDescription(NSRunningApplication* app) {
   NSURL* bundle_url = app.bundleURL;
   if (!bundle_url) {
@@ -24,12 +29,14 @@ bool AppContainsBluetoothUsageDescription(NSRunningApplication* app) {
       [bundle objectForInfoDictionaryKey:@"NSBluetoothAlwaysUsageDescription"];
   return bluetooth_entry != nil;
 }
+#endif
 
 }  // namespace
 
 namespace base {
 
 bool DoesResponsibleProcessHaveBluetoothMetadata() {
+#if !IS_MAS_BUILD()
   const pid_t pid = getpid();
   const pid_t responsible_pid = responsibility_get_pid_responsible_for_pid(pid);
   // Returns true directly if this is a self-responsible app(e.g. Chrome opens
@@ -46,6 +53,9 @@ bool DoesResponsibleProcessHaveBluetoothMetadata() {
     return AppContainsBluetoothUsageDescription(app);
   }
   return false;
+#else
+  return true;
+#endif
 }
 
 }  // namespace base

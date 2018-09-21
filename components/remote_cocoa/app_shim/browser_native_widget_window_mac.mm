@@ -9,7 +9,9 @@
 #include "base/mac/mac_util.h"
 #include "components/remote_cocoa/app_shim/native_widget_ns_window_bridge.h"
 #include "components/remote_cocoa/common/native_widget_ns_window_host.mojom.h"
+#include "electron/mas.h"
 
+#if !IS_MAS_BUILD()
 namespace {
 // Workaround for https://crbug.com/1369643
 const double kThinControllerHeight = 0.5;
@@ -100,12 +102,15 @@ const double kThinControllerHeight = 0.5;
 
 @end
 
+#endif  // MAS_BUILD
+
 @implementation BrowserNativeWidgetWindow
 
 @synthesize thinTitlebarViewController = _thinTitlebarViewController;
 
 // NSWindow (PrivateAPI) overrides.
 
+#if !IS_MAS_BUILD()
 + (Class)frameViewClassForStyleMask:(NSUInteger)windowStyle {
   // - NSThemeFrame and its subclasses will be nil if it's missing at runtime.
   if ([BrowserWindowFrame class])
@@ -164,6 +169,8 @@ const double kThinControllerHeight = 0.5;
   return NO;
 }
 
+#endif  // MAS_BUILD
+
 // Handle "Move focus to the window toolbar" configured in System Preferences ->
 // Keyboard -> Shortcuts -> Keyboard. Usually Ctrl+F5. The argument (|unknown|)
 // tends to just be nil.
@@ -174,8 +181,8 @@ const double kThinControllerHeight = 0.5;
 }
 
 - (void)setAlwaysShowTrafficLights:(BOOL)alwaysShow {
-  [base::apple::ObjCCastStrict<BrowserWindowFrame>(self.contentView.superview)
-      setAlwaysShowTrafficLights:alwaysShow];
+  // [base::apple::ObjCCastStrict<BrowserWindowFrame>(self.contentView.superview)
+  //    setAlwaysShowTrafficLights:alwaysShow];
 }
 
 @end

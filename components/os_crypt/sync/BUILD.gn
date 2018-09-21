@@ -38,6 +38,8 @@ component("sync") {
       "os_crypt_mac.mm",
     ]
     deps += [ "//crypto:mock_apple_keychain" ]
+    deps += ["//electron/build/config:generate_mas_config"]
+
   } else if (is_win) {
     sources += [ "os_crypt_win.cc" ]
     deps += [ "//components/version_info" ]

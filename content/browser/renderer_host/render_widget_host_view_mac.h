@@ -24,6 +24,7 @@
 #include "content/browser/renderer_host/text_input_manager.h"
 #include "content/common/content_export.h"
 #include "content/common/render_widget_host_ns_view.mojom.h"
+#include "electron/mas.h"
 #include "mojo/public/cpp/bindings/associated_receiver.h"
 #include "mojo/public/cpp/bindings/associated_remote.h"
 #include "third_party/blink/public/mojom/webshare/webshare.mojom.h"
@@ -54,7 +55,9 @@ class CursorManager;
 
 @protocol RenderWidgetHostViewMacDelegate;
 
+#if !IS_MAS_BUILD()
 @class NSAccessibilityRemoteUIElement;
+#endif
 @class RenderWidgetHostViewCocoa;
 
 namespace content {
@@ -692,9 +695,11 @@ class CONTENT_EXPORT RenderWidgetHostViewMac
   // EnsureSurfaceSynchronizedForWebTest().
   uint32_t latest_capture_sequence_number_ = 0u;
 
+#if !IS_MAS_BUILD()
   // Remote accessibility objects corresponding to the NSWindow that this is
   // displayed to the user in.
   NSAccessibilityRemoteUIElement* __strong remote_window_accessible_;
+#endif
 
   // Used to force the NSApplication's focused accessibility element to be the
   // content::BrowserAccessibilityCocoa accessibility tree when the NSView for
