@@ -30,6 +30,8 @@
 #include "components/viz/common/surfaces/scoped_surface_id_allocator.h"
 #include "components/viz/common/surfaces/surface_id.h"
 #include "content/browser/renderer_host/display_feature.h"
+#include "content/browser/renderer_host/visible_time_request_trigger.h"
+#include "content/browser/web_contents/web_contents_view.h"
 #include "content/common/content_export.h"
 #include "content/public/browser/render_frame_metadata_provider.h"
 #include "content/public/browser/render_widget_host.h"
@@ -72,11 +74,13 @@ namespace content {
 class DevicePosturePlatformProvider;
 class MouseWheelPhaseHandler;
 class RenderWidgetHostImpl;
+class RenderWidgetHostViewGuest;
 class ScopedViewTransitionResources;
 class TextInputManager;
 class TouchSelectionControllerClientManager;
 class TouchSelectionControllerInputObserver;
 class WebContentsAccessibility;
+class WebContentsView;
 class DelegatedFrameHost;
 class SyntheticGestureTarget;
 
@@ -150,6 +154,10 @@ class CONTENT_EXPORT RenderWidgetHostViewBase
   void ProcessGestureEvent(const blink::WebGestureEvent& event,
                            const ui::LatencyInfo& latency) override;
   RenderWidgetHostViewBase* GetRootView() override;
+  virtual RenderWidgetHostViewBase* CreateViewForWidget(
+      RenderWidgetHost* render_widget_host,
+      RenderWidgetHost* embedder_render_widget_host,
+      WebContentsView* web_contents_view);
   void OnAutoscrollStart() override;
   const viz::DisplayHitTestQueryMap& GetDisplayHitTestQuery() const override;
 
@@ -195,6 +203,9 @@ class CONTENT_EXPORT RenderWidgetHostViewBase
       const gfx::Rect& keyboard_rect) override {}
   void NotifyContextMenuInsetsObservers(const gfx::Rect&) override {}
   bool IsHTMLFormPopup() const override;
+
+  virtual void InitAsGuest(RenderWidgetHostView* parent_host_view,
+                           RenderWidgetHostViewGuest* guest_view) {}
 
   // This only needs to be overridden by RenderWidgetHostViewBase subclasses
   // that handle content embedded within other RenderWidgetHostViews.
