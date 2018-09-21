@@ -1016,6 +1016,9 @@ class CONTENT_EXPORT RenderWidgetHostImpl
   // Requests a commit and forced redraw in the renderer compositor.
   void ForceRedrawForTesting();
 
+  // Electron: Prevents the widget from getting hidden.
+  bool disable_hidden_ = false;
+
  protected:
   // |routing_id| must not be MSG_ROUTING_NONE.
   // If this object outlives |delegate|, DetachDelegate() must be called when
