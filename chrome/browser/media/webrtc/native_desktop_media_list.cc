@@ -215,9 +215,13 @@ content::DesktopMediaID::Id GetUpdatedWindowId(
     }
   }
 #elif BUILDFLAG(IS_MAC)
+#if 0
+  // Should be re-enabled when addressing
+  // https://github.com/electron/electron/issues/30682
   if (remote_cocoa::ScopedCGWindowID::Get(desktop_media_id.id)) {
     window_id = desktop_media_id.id;
   }
+#endif
 #endif
 
   return window_id;
@@ -320,7 +324,7 @@ class NativeDesktopMediaList::Worker
   base::WeakPtr<NativeDesktopMediaList> media_list_;
 
   DesktopMediaID::Type source_type_;
-  const std::unique_ptr<ThumbnailCapturer> capturer_;
+  std::unique_ptr<ThumbnailCapturer> capturer_;
   const ThumbnailCapturer::FrameDeliveryMethod frame_delivery_method_;
   const bool add_current_process_windows_;
   const bool auto_show_delegated_source_list_;
@@ -602,6 +606,12 @@ void NativeDesktopMediaList::Worker::RefreshNextThumbnail() {
       FROM_HERE,
       base::BindOnce(&NativeDesktopMediaList::UpdateNativeThumbnailsFinished,
                      media_list_));
+
+  // This call is necessary to release underlying OS screen capture mechanisms.
+  // Skip if the source list is delegated, as the source list window will be active.
+  if (!capturer_->GetDelegatedSourceListController()) {
+    capturer_.reset();
+  }
 }
 
 void NativeDesktopMediaList::Worker::OnCaptureResult(
@@ -1009,6 +1019,11 @@ void NativeDesktopMediaList::RefreshForVizFrameSinkWindows(
         FROM_HERE, base::BindOnce(&Worker::RefreshThumbnails,
                                   base::Unretained(worker_.get()),
                                   std::move(native_ids), thumbnail_size_));
+  } else {
+#if defined(USE_AURA)
+    pending_native_thumbnail_capture_ = true;
+#endif
+    UpdateNativeThumbnailsFinished();
   }
 }
 
