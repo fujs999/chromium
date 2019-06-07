@@ -52,9 +52,8 @@ void PrintingContextLinux::AskUserForSettings(int max_pages,
                                               bool is_scripted,
                                               PrintSettingsCallback callback) {
   if (!print_dialog_) {
-    // Can only get here if the renderer is sending bad messages.
-    // http://crbug.com/341777
-    NOTREACHED();
+    print_dialog_ = ui::LinuxUi::instance()->CreatePrintDialog(this);
+    print_dialog_->UseDefaultSettings();
   }
 
   print_dialog_->ShowDialog(delegate_->GetParentView(), has_selection,

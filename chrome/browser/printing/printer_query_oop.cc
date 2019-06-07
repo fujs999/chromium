@@ -127,7 +127,7 @@ void PrinterQueryOop::OnDidAskUserForSettings(
     std::unique_ptr<PrintSettings> new_settings,
     mojom::ResultCode result) {
   DCHECK_CURRENTLY_ON(content::BrowserThread::UI);
-  if (result == mojom::ResultCode::kSuccess) {
+  if (result == mojom::ResultCode::kSuccess && query_with_ui_client_id_) {
     // Want the same PrintBackend service as the query so that we use the same
     // device context.
     print_document_client_id_ =
