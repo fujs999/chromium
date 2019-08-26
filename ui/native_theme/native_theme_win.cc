@@ -696,6 +696,8 @@ bool NativeThemeWin::ShouldUseDarkColors() const {
   if (InForcedColorsMode() && !IsForcedDarkMode()) {
     return false;
   }
+  if (theme_source() == ThemeSource::kForcedLight) return false;
+  if (theme_source() == ThemeSource::kForcedDark) return true;
   return NativeTheme::ShouldUseDarkColors();
 }
 
