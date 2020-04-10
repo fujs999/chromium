@@ -371,7 +371,11 @@ bool V4L2Device::Poll(bool poll_device, bool* event_pending) {
     VPLOGF(1) << "poll() failed";
     return false;
   }
-  *event_pending = (pollfd != -1 && pollfds[pollfd].revents & POLLPRI);
+
+  // HACK: Could not fake POLLPRI with eventfd
+  // *event_pending = (pollfd != -1 && pollfds[pollfd].revents & POLLPRI);
+  *event_pending = (pollfd != -1 && pollfds[pollfd].revents & POLLIN);
+
   return true;
 }
 
