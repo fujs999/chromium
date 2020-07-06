@@ -27,6 +27,8 @@ namespace content {
 class WebContents;
 }  // namespace content
 
+class ElectronAccessibilityUIMessageHandler;
+
 namespace user_prefs {
 class PrefRegistrySyncable;
 }  // namespace user_prefs
@@ -77,6 +79,8 @@ class AccessibilityUIMessageHandler : public content::WebUIMessageHandler {
   static void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry);
 
  private:
+  friend class ElectronAccessibilityUIMessageHandler;
+
   void ToggleAccessibilityForWebContents(const base::Value::List& args);
   void SetGlobalFlag(const base::Value::List& args);
   void SetGlobalString(const base::Value::List& args);
