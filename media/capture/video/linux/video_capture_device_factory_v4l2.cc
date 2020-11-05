@@ -208,7 +208,9 @@ void VideoCaptureDeviceFactoryV4L2::GetDevicesInfo(
         continue;
       }
 
-      devices_info.emplace_back(VideoCaptureDeviceDescriptor(
+
+      // HACK: Somehow the newest chromium would prefer using the last device in some cases, e.g. apprtc
+      devices_info.emplace(devices_info.begin(), VideoCaptureDeviceDescriptor(
           display_name, unique_id, model_id,
           VideoCaptureApi::LINUX_V4L2_SINGLE_PLANE, GetControlSupport(fd.get()),
           VideoCaptureTransportType::OTHER_TRANSPORT, facing_mode));
