@@ -232,10 +232,11 @@ void GbmSurfacelessWayland::Present(SwapCompletionCallback completion_callback,
   } else {
     // TODO(fangzhoug): the following should be replaced by a per surface flush
     // as it gets implemented in GL drivers.
-    EGLSyncKHR fence = InsertFence(has_implicit_external_sync_);
+    // HACK: The Mali's implicit external sync seems broken.
+    EGLSyncKHR fence = InsertFence(/* has_implicit_external_sync_ */ false);
     CHECK_NE(fence, EGL_NO_SYNC_KHR) << "eglCreateSyncKHR failed";
 
-    fence_wait_task = base::BindOnce(&WaitForEGLFence, GetDisplay(), fence);
+    fence_wait_task = base::BindOnce(&WaitForEGLFence, GetEGLDisplay(), fence);
   }
 
   base::OnceClosure fence_retired_callback = base::BindOnce(
