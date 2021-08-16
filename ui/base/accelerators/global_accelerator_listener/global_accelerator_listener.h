@@ -8,6 +8,7 @@
 #include <map>
 
 #include "base/memory/raw_ptr.h"
+#include "content/public/browser/media_keys_listener_manager.h"
 #include "ui/base/accelerators/command.h"
 
 namespace ui {
@@ -37,6 +38,9 @@ class GlobalAcceleratorListener {
 
   // The instance may be nullptr.
   static GlobalAcceleratorListener* GetInstance();
+
+  // enables media keys to work with Electron's globalShortcut module.
+  static void SetShouldUseInternalMediaKeyHandling(bool should_use);
 
   // Register an observer for when a certain `accelerator` is struck. Returns
   // true if register successfully, or false if the specified `accelerator`
