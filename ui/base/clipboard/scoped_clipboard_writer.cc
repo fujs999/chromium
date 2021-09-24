@@ -237,6 +237,16 @@ void ScopedClipboardWriter::WriteData(std::u16string_view format,
   }
 }
 
+void ScopedClipboardWriter::WriteUnsafeRawData(const std::u16string& format,
+                                               mojo_base::BigBuffer data) {
+  static constexpr int kMaxRegisteredFormats = 100;
+  if (counter_ >= kMaxRegisteredFormats)
+    return;
+  counter_++;
+  platform_representations_.push_back(
+      {base::UTF16ToUTF8(format), std::move(data)});
+}
+
 void ScopedClipboardWriter::Reset() {
   objects_.clear();
   raw_objects_.clear();

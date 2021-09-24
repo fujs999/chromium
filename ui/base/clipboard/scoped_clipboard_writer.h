@@ -87,6 +87,10 @@ class COMPONENT_EXPORT(UI_BASE_CLIPBOARD) ScopedClipboardWriter {
   // This is only used to write custom format data.
   void WriteData(std::u16string_view format, mojo_base::BigBuffer data);
 
+  // write raw (non-pickled) data to the clipboard
+  void WriteUnsafeRawData(const std::u16string& format,
+                          mojo_base::BigBuffer data);
+
   void WriteImage(const SkBitmap& bitmap);
 
   // Mark the data to be written as confidential.
