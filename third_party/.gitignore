@@ -45,7 +45,9 @@
 /devserver
 /directxsdk
 /edk2
+/electron_node
 /elfutils/src
+/engflow-reclient-configs/
 /espresso/lib/
 /eyesfree/src
 /fast_float/src
@@ -93,6 +95,7 @@
 /mocha
 /mockito/src
 /nacl_sdk_binaries/
+/nan
 /ninja
 /node/*.tar.gz
 /node/linux/
@@ -137,7 +140,7 @@
 /spirv-cross/src
 /spirv-headers/src
 /spirv-tools/src
-/src
+/squirrel.mac
 /subresource-filter-ruleset/data/*
 /swift-format
 /swift-toolchain
