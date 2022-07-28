@@ -268,6 +268,7 @@ class VIEWS_EXPORT DesktopWindowTreeHostWin : public DesktopWindowTreeHost,
   void HandleWindowSizeUnchanged() override;
   void HandleWindowScaleFactorChanged(float window_scale_factor) override;
   void HandleHeadlessWindowBoundsChanged(const gfx::Rect& bounds) override;
+  bool HandleMouseEventForCaption(UINT message) const override;
 
   // Overridden from WidgetObserver.
   void OnWidgetThemeChanged(Widget* widget) override;
