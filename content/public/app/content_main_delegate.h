@@ -9,6 +9,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <string_view>
 #include <vector>
 
 #include "base/notreached.h"
@@ -173,6 +174,8 @@ class CONTENT_EXPORT ContentMainDelegate {
   // swallow the event.
   virtual bool ShouldHandleConsoleControlEvents();
 #endif
+
+  virtual std::string_view GetBrowserV8SnapshotFilename();
 
  protected:
   friend class ContentClientCreator;

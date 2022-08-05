@@ -5,6 +5,7 @@
 #include "content/public/app/content_main_delegate.h"
 
 #include <variant>
+#include <string_view>
 
 #include "base/check.h"
 #include "base/notreached.h"
@@ -72,6 +73,10 @@ void ContentMainDelegate::CreateThreadPool(std::string_view name) {
 std::optional<int> ContentMainDelegate::PostEarlyInitialization(
     InvokedIn invoked_in) {
   return std::nullopt;
+}
+
+std::string_view ContentMainDelegate::GetBrowserV8SnapshotFilename() {
+  return std::string_view();
 }
 
 ContentClient* ContentMainDelegate::CreateContentClient() {
