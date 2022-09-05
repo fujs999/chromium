@@ -14,6 +14,12 @@ class TimeTicks;
 class Value;
 }
 
+namespace v8 {
+class Value;
+template <class T>
+class Local;
+}
+
 namespace blink {
 
 // Non-nullopt `base::Value` is passed to the callback if
@@ -42,6 +48,9 @@ namespace blink {
 // representing the arguments and invariants.
 using WebScriptExecutionCallback =
     base::OnceCallback<void(std::optional<base::Value>, base::TimeTicks)>;
+
+using WebScriptExecutionCallbackUnmodified =
+    base::OnceCallback<void(const std::vector<v8::Local<v8::Value>>&)>;
 
 }  // namespace blink
 
