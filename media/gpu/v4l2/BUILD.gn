@@ -77,7 +77,12 @@ source_set("v4l2") {
       # AV1 delegate depends on header files only in ChromeOS SDK
       "v4l2_video_decoder_delegate_av1.cc",
       "v4l2_video_decoder_delegate_av1.h",
+    ]
+  }
 
+  # HACK: Enable V4L2 VEA for v4l-rkmpp.
+  if (true) {
+    sources += [
       # TODO(crbug.com/901264): Encoders use hack for passing offset
       # within a DMA-buf, which is not supported upstream.
       "v4l2_video_encode_accelerator.cc",
