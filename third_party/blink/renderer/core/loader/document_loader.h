@@ -328,7 +328,7 @@ class CORE_EXPORT DocumentLoader : public GarbageCollected<DocumentLoader>,
           soft_navigation_heuristics_task_id,
       bool should_skip_screenshot);
 
-  void SetDefersLoading(LoaderFreezeMode);
+  void SetDefersLoading(LoaderFreezeMode) override;
 
   DocumentLoadTiming& GetTiming() { return document_load_timing_; }
 
