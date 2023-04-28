@@ -20,8 +20,10 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/values.h"
 #include "build/build_config.h"
+#if 0
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/profiles/profiles_state.h"
+#endif
 #include "chrome/browser/spellchecker/spellcheck_factory.h"
 #include "chrome/browser/spellchecker/spellcheck_hunspell_dictionary.h"
 #include "components/language/core/browser/pref_names.h"
@@ -66,7 +68,10 @@ SpellcheckService::SpellCheckerBinder& GetSpellCheckerBinderOverride() {
 // Only record spelling-configuration metrics for profiles in which the user
 // can configure spelling.
 bool RecordSpellingConfigurationMetrics(content::BrowserContext* context) {
+#if 0
   return profiles::IsRegularUserProfile(Profile::FromBrowserContext(context));
+#endif
+  return true;
 }
 
 }  // namespace
