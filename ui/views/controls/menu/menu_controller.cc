@@ -711,6 +711,16 @@ void MenuController::Run(Widget* parent,
     SetSelection(root, SELECTION_OPEN_SUBMENU | SELECTION_UPDATE_IMMEDIATELY);
   }
 
+  if (source_type == ui::mojom::MenuSourceType::kKeyboard &&
+     (menu_type == MenuType::kContextMenu || menu_type == MenuType::kMenuItemContextMenu) &&
+     root->HasSubmenu()) {
+    // For context menus opened via the keyboard we select the first item by default
+    // to match accessibility expectations
+    MenuItemView* first_item = FindInitialSelectableMenuItem(root, INCREMENT_SELECTION_DOWN);
+    if (first_item)
+      SetSelection(first_item, SELECTION_UPDATE_IMMEDIATELY);
+  }
+
   if (button_controller) {
     pressed_lock_ = button_controller->TakeLock(
         false, ui::LocatedEvent::FromIfValid(event));
@@ -2427,19 +2437,15 @@ void MenuController::OpenMenuImpl(MenuItemView* item, bool show) {
     }
     item->GetSubmenu()->ShowAt(params);
 
-    // Figure out if the mouse is under the menu; if so, remember the mouse
-    // location so we can ignore the first mouse move event(s) with that
-    // location. We do this after `ShowAt` because `ConvertFromScreen` doesn't
-    // work correctly if the widget isn't shown.
+    // Remember the mouse location so we can ignore the first mouse move
+    // event(s) with that location. We do this after `ShowAt` because
+    // `ConvertFromScreen` doesn't work correctly if the widget isn't shown.
     if (item->GetSubmenu()->GetWidget()) {
       const gfx::Point mouse_pos = ConvertFromScreen(
           *item->submenu_,
           display::Screen::GetScreen()->GetCursorScreenPoint());
-      MenuPart part_under_mouse = GetMenuPart(item->submenu_.get(), mouse_pos);
-      if (part_under_mouse.type != MenuPartType::kNone) {
-        menu_open_mouse_loc_ =
-            GetLocationInRootMenu(*item->submenu_, mouse_pos);
-      }
+      menu_open_mouse_loc_ =
+          GetLocationInRootMenu(*item->submenu_, mouse_pos);
     }
 
     item->GetSubmenu()->GetWidget()->SetNativeWindowProperty(
