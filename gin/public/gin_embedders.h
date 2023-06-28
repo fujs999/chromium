@@ -20,6 +20,8 @@ enum GinEmbedder : uint16_t {
   kEmbedderBlink,
   kEmbedderPDFium,
   kEmbedderFuchsia,
+  kEmbedderElectron,
+  kEmbedderBlinkTag,
 };
 
 }  // namespace gin
