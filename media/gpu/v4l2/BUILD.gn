@@ -7,9 +7,17 @@ import("//build/config/ui.gni")
 import("//media/gpu/args.gni")
 import("//media/media_options.gni")
 import("//testing/test.gni")
+import("//tools/generate_stubs/rules.gni")
 import("//ui/gl/features.gni")
 
 assert(use_v4l2_codec)
+
+generate_stubs("libv4l2_stubs") {
+  extra_header = "v4l2_stub_header.fragment"
+  sigs = [ "v4l2.sig" ]
+  output_name = "v4l2_stubs"
+  deps = [ "//base" ]
+}
 
 source_set("v4l2") {
   defines = [ "MEDIA_GPU_IMPLEMENTATION" ]
