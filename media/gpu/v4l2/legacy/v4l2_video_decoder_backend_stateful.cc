@@ -759,6 +759,7 @@ bool V4L2StatefulVideoDecoderBackend::IsSupportedProfile(
   DCHECK(device_);
   if (supported_profiles_.empty()) {
     const std::vector<uint32_t> kSupportedInputFourccs = {
+        V4L2_PIX_FMT_AV1,
         V4L2_PIX_FMT_H264,
         V4L2_PIX_FMT_VP8,
         V4L2_PIX_FMT_VP9,

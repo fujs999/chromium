@@ -156,6 +156,8 @@ InputBufferFragmentSplitter::CreateFromProfile(
     case VideoCodec::kH264:
       return std::make_unique<
           v4l2_vda_helpers::H264InputBufferFragmentSplitter>();
+    case VideoCodec::kAV1:
+      // HACK: Use the default implementation for AV1.
     case VideoCodec::kVP8:
     case VideoCodec::kVP9:
       // VP8/VP9 don't need any frame splitting, use the default implementation.

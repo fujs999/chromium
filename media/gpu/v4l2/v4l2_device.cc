@@ -375,7 +375,8 @@ bool V4L2Device::SetDevicePollInterrupt() {
   if (HANDLE_EINTR(write(device_poll_interrupt_fd_.get(), &buf, sizeof(buf))) ==
       -1) {
     VPLOGF(1) << "write() failed";
-    return false;
+    // HACK: Fake success for eventfd
+    // return false;
   }
   return true;
 }
@@ -391,7 +392,8 @@ bool V4L2Device::ClearDevicePollInterrupt() {
       return true;
     } else {
       VPLOGF(1) << "read() failed";
-      return false;
+      // HACK: Fake success for eventfd
+      // return false;
     }
   }
   return true;
@@ -861,7 +863,8 @@ void V4L2Device::CloseDevice() {
 }
 
 void V4L2Device::EnumerateDevicesForType(Type type) {
-#if BUILDFLAG(IS_CHROMEOS)
+// HACK: We are using chromeos style devices.
+#if 1 //BUILDFLAG(IS_CHROMEOS)
   static const std::string kDecoderDevicePattern = "/dev/video-dec";
   static const std::string kEncoderDevicePattern = "/dev/video-enc";
   static const std::string kImageProcessorDevicePattern = "/dev/image-proc";
