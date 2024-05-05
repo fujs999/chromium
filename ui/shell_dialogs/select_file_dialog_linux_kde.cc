@@ -155,7 +155,18 @@ class SelectFileDialogLinuxKde : public SelectFileDialogLinux {
   void OnSelectMultiFileDialogResponse(
       gfx::AcceleratedWidget parent,
       std::unique_ptr<KDialogOutputParams> results);
+
+  // Common function for OnSelectSingleFolderDialogResponse and
+  // OnSelectMultiFileDialogResponse.
+  void SelectMultiFileDialogHelper(
+      bool allow_folder,
+      gfx::AcceleratedWidget parent,
+      std::unique_ptr<KDialogOutputParams> results);
+
   void OnSelectSingleFolderDialogResponse(
+      gfx::AcceleratedWidget parent,
+      std::unique_ptr<KDialogOutputParams> results);
+  void OnSelectMultiFolderDialogResponse(
       gfx::AcceleratedWidget parent,
       std::unique_ptr<KDialogOutputParams> results);
 
@@ -468,6 +479,7 @@ void SelectFileDialogLinuxKde::CreateSelectFolderDialog(
   int title_message_id = (type == SELECT_UPLOAD_FOLDER)
                              ? IDS_SELECT_UPLOAD_FOLDER_DIALOG_TITLE
                              : IDS_SELECT_FOLDER_DIALOG_TITLE;
+  bool multiple_selection = allow_multiple_selection();
   pipe_task_runner_->PostTaskAndReplyWithResult(
       FROM_HERE,
       base::BindOnce(
@@ -475,10 +487,12 @@ void SelectFileDialogLinuxKde::CreateSelectFolderDialog(
           KDialogParams(
               "--getexistingdirectory", GetTitle(title, title_message_id),
               default_path.empty() ? *last_opened_path() : default_path, parent,
-              false, false)),
+              false, multiple_selection)),
       base::BindOnce(
-          &SelectFileDialogLinuxKde::OnSelectSingleFolderDialogResponse, this,
-          parent));
+          multiple_selection
+              ? &SelectFileDialogLinuxKde::OnSelectMultiFolderDialogResponse
+              : &SelectFileDialogLinuxKde::OnSelectSingleFolderDialogResponse,
+          this, parent));
 }
 
 void SelectFileDialogLinuxKde::CreateFileOpenDialog(
@@ -568,7 +582,8 @@ void SelectFileDialogLinuxKde::OnSelectSingleFolderDialogResponse(
   SelectSingleFileHelper(true, std::move(results));
 }
 
-void SelectFileDialogLinuxKde::OnSelectMultiFileDialogResponse(
+void SelectFileDialogLinuxKde::SelectMultiFileDialogHelper(
+    bool allow_folder,
     gfx::AcceleratedWidget parent,
     std::unique_ptr<KDialogOutputParams> results) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
@@ -586,7 +601,7 @@ void SelectFileDialogLinuxKde::OnSelectMultiFileDialogResponse(
        base::SplitStringPiece(results->output, "\n", base::KEEP_WHITESPACE,
                               base::SPLIT_WANT_NONEMPTY)) {
     base::FilePath path(line);
-    if (CallDirectoryExistsOnUIThread(path))
+    if (!allow_folder && CallDirectoryExistsOnUIThread(path))
       continue;
     filenames_fp.push_back(path);
   }
@@ -596,6 +611,18 @@ void SelectFileDialogLinuxKde::OnSelectMultiFileDialogResponse(
     return;
   }
   MultiFilesSelected(filenames_fp);
+}
+
+void SelectFileDialogLinuxKde::OnSelectMultiFolderDialogResponse(
+    gfx::AcceleratedWidget parent,
+    std::unique_ptr<KDialogOutputParams> results) {
+  SelectMultiFileDialogHelper(true, parent, std::move(results));
+}
+
+void SelectFileDialogLinuxKde::OnSelectMultiFileDialogResponse(
+    gfx::AcceleratedWidget parent,
+    std::unique_ptr<KDialogOutputParams> results) {
+  SelectMultiFileDialogHelper(false, parent, std::move(results));
 }
 
 }  // namespace ui
