@@ -34,7 +34,7 @@ class ServiceProcessTracker {
 
   void NotifyTerminated(ServiceProcessId id);
 
-  void NotifyCrashed(ServiceProcessId id);
+  void NotifyCrashed(ServiceProcessId id, int exit_code);
 
   void AddObserver(ServiceProcessHost::Observer* observer);
 
