@@ -1223,6 +1223,8 @@ class VIEWS_EXPORT Widget : public internal::NativeWidgetDelegate,
   // True if widget was created in headless mode.
   bool is_headless() const { return is_headless_; }
 
+  void DisableHeadlessMode() { is_headless_ = false; }
+
   // True if the window size will follow the content preferred size.
   bool is_autosized() const { return is_autosized_; }
 

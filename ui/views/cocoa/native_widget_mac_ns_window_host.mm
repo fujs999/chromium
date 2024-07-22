@@ -659,9 +659,10 @@ void NativeWidgetMacNSWindowHost::CreateCompositor(
   // case it will never become visible but we want its compositor to produce
   // frames for screenshooting and screencasting.
   UpdateCompositorProperties();
-  layer()->SetVisible(is_visible_);
+  layer()->SetVisible(is_visible_ || is_headless_mode_window_);
   if (is_visible_ || is_headless_mode_window_) {
     compositor_->Unsuspend();
+    layer()->SchedulePaint(layer()->bounds());
   }
 
   // Register the CGWindowID (used to identify this window for video capture)
