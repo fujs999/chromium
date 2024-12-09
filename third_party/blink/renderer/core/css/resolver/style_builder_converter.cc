@@ -3859,4 +3859,12 @@ PositionArea StyleBuilderConverter::ConvertPositionArea(
   return PositionArea(span[0], span[1], span[2], span[3]);
 }
 
+Length StyleBuilderConverter::ConvertCornerSmoothing(StyleResolverState& state, const CSSValue& value) {
+  auto* ident = DynamicTo<CSSIdentifierValue>(value);
+  if (ident && ident->GetValueID() == CSSValueID::kSystemUi) {
+    return Length::Auto();
+  }
+  return ConvertLength(state, value);
+}
+
 }  // namespace blink

@@ -128,6 +128,8 @@ bool StructTraits<blink::mojom::RendererPreferencesDataView,
     return false;
   }
 
+  out->electron_corner_smoothing_css = data.electron_corner_smoothing_css();
+
   out->canvas_noise_token = data.canvas_noise_token();
 
   return true;

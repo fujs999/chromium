@@ -43,6 +43,24 @@ float EffectiveCurvature(Superellipse superellipse, const gfx::SizeF& radius) {
                           : superellipse.Exponent();
 }
 
+float SmoothnessFromLength(const Length& length) {
+  // `none` = 0%
+  if (length.IsNone()) {
+    return 0.0f;
+  }
+
+  // `system-ui` keyword, represented internally as "auto" length
+  if (length.HasAuto()) {
+#if BUILDFLAG(IS_MAC)
+    return 0.6f;
+#else
+    return 0.0f;
+#endif  // BUILDFLAG(IS_MAC)
+  }
+
+  return length.Percent() / 100.0f;
+}
+
 ContouredRect::CornerCurvature CalcCurvatureFor(
     const ComputedStyle& style,
     const FloatRoundedRect::Radii& radii) {
@@ -50,7 +68,8 @@ ContouredRect::CornerCurvature CalcCurvatureFor(
       EffectiveCurvature(style.CornerTopLeftShape(), radii.TopLeft()),
       EffectiveCurvature(style.CornerTopRightShape(), radii.TopRight()),
       EffectiveCurvature(style.CornerBottomRightShape(), radii.BottomRight()),
-      EffectiveCurvature(style.CornerBottomLeftShape(), radii.BottomLeft()));
+      EffectiveCurvature(style.CornerBottomLeftShape(), radii.BottomLeft()),
+      SmoothnessFromLength(style.ElectronCornerSmoothing()));
 }
 
 ContouredRect PixelSnappedContouredBorderInternal(

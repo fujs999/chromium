@@ -313,7 +313,7 @@ class CSSProperties(object):
             if name_without_leading_dash.startswith('-'):
                 name_without_leading_dash = name_without_leading_dash[1:]
             internal_visited_order = 1
-            if name_without_leading_dash.startswith('internal-visited-'):
+            if name_without_leading_dash.startswith('internal-'):
                 internal_visited_order = 0
             property_.sorting_key = (-property_.priority,
                                      internal_visited_order,

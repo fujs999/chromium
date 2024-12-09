@@ -417,16 +417,20 @@ void BoxPainterBase::PaintInsetBoxShadow(const PaintInfo& info,
     ContouredRect inner_rounded_rect(
         FloatRoundedRect(inner_rect, bounds.GetRadii()));
     ApplySpreadToShadowShape(inner_rounded_rect, -shadow.Spread());
+    ContouredRect contoured_bounds(
+        bounds, ContouredBorderGeometry::ContouredBorder(
+                    style, PhysicalRect::EnclosingRect(bounds.Rect()))
+                    .GetCornerCurvature());
     if (inner_rounded_rect.IsEmpty()) {
       // |AutoDarkMode::Disabled()| is used because |shadow_color| has already
       // been adjusted for dark mode.
-      context.FillRoundedRect(bounds, shadow_color, AutoDarkMode::Disabled());
+      context.FillContouredRect(contoured_bounds, shadow_color, AutoDarkMode::Disabled());
       continue;
     }
     GraphicsContextStateSaver state_saver(context);
     if (bounds.IsRounded()) {
       // TODO(crbug.com/397459628) render corner-shape with box-shadow
-      context.ClipContouredRect(ContouredRect(bounds));
+      context.ClipContouredRect(contoured_bounds);
     } else {
       context.Clip(bounds.Rect());
     }

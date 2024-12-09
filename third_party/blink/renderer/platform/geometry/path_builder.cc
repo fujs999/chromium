@@ -4,6 +4,7 @@
 
 #include "third_party/blink/renderer/platform/geometry/path_builder.h"
 
+#include "electron/shell/renderer/electron_smooth_round_rect.h"
 #include "third_party/blink/renderer/platform/geometry/contoured_rect.h"
 #include "third_party/blink/renderer/platform/geometry/infinite_int_rect.h"
 #include "third_party/blink/renderer/platform/geometry/path.h"
@@ -231,6 +232,26 @@ PathBuilder& PathBuilder::AddContouredRect(
     AddRoundedRect(target_rect);
     return *this;
   }
+
+  // TODO(clavin): decompose `electron::DrawSmoothRoundRect` into corners
+  if (contoured_rect.GetCornerCurvature().IsSmooth()) {
+    const gfx::RectF& box = contoured_rect.Rect();
+
+    // Constrain the radii (on a copy) to ensure they do not exceed the box.
+    FloatRoundedRect round_rect_copy = contoured_rect.AsRoundedRect();
+    round_rect_copy.ConstrainRadii();
+    const FloatRoundedRect::Radii& radii = round_rect_copy.GetRadii();
+    float smoothness = std::clamp(
+        contoured_rect.GetCornerCurvature().Smoothness(), 0.0f, 1.0f);
+
+    builder_.addPath(electron::DrawSmoothRoundRect(
+        box.x(), box.y(), box.width(), box.height(), smoothness,
+        radii.TopLeft().width(), radii.TopRight().width(),
+        radii.BottomRight().width(), radii.BottomLeft().width()));
+
+    return *this;
+  }
+
   const FloatRoundedRect& origin_rect = contoured_rect.GetOriginRect();
 
   if (origin_rect == target_rect) {

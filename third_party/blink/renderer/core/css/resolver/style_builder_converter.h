@@ -419,6 +419,8 @@ class StyleBuilderConverter {
                                                  const CSSValue&);
 
   static PositionArea ConvertPositionArea(StyleResolverState&, const CSSValue&);
+
+  static Length ConvertCornerSmoothing(StyleResolverState&, const CSSValue&);
 };
 
 template <typename T>

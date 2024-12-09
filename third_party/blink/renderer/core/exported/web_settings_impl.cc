@@ -816,4 +816,8 @@ void WebSettingsImpl::SetRootScrollbarThemeColor(
   settings_->SetRootScrollbarThemeColor(theme_color);
 }
 
+void WebSettingsImpl::SetCornerSmoothingCSS(bool available) {
+  settings_->SetElectronCornerSmoothingCSS(available);
+}
+
 }  // namespace blink

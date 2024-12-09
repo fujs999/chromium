@@ -275,6 +275,11 @@ struct BLINK_COMMON_EXPORT
     return data.explicitly_allowed_network_ports;
   }
 
+  static const bool& electron_corner_smoothing_css(
+      const ::blink::RendererPreferences& data) {
+    return data.electron_corner_smoothing_css;
+  }
+
   static const uint64_t& canvas_noise_token(
       const ::blink::RendererPreferences& data) {
     return data.canvas_noise_token;

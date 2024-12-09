@@ -3576,6 +3576,9 @@ void WebViewImpl::UpdateRendererPreferences(
   CanvasNoiseToken::Set(renderer_preferences_.canvas_noise_token);
 
   MaybePreloadSystemFonts(GetPage());
+
+  GetSettings()->SetCornerSmoothingCSS(
+      renderer_preferences_.electron_corner_smoothing_css);
 }
 
 void WebViewImpl::SetHistoryIndexAndLength(int32_t history_index,

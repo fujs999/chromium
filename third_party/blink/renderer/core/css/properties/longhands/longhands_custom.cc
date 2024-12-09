@@ -12047,5 +12047,25 @@ const CSSValue* InternalEmptyLineHeight::ParseSingleValue(
                                          CSSValueID::kNone>(stream);
 }
 
+const CSSValue* ElectronCornerSmoothing::ParseSingleValue(
+    CSSParserTokenStream& stream,
+    const CSSParserContext& context,
+    const CSSParserLocalContext&) const {
+  // Fail parsing if this rule is disabled by document settings.
+  if (Settings* settings = context.GetDocument()->GetSettings();
+      settings && !settings->GetElectronCornerSmoothingCSS()) {
+    return nullptr;
+  }
+
+  // Try to parse `system-ui` keyword first.
+  if (auto* ident =
+          css_parsing_utils::ConsumeIdent<CSSValueID::kSystemUi>(stream)) {
+    return ident;
+  }
+  // Try to parse as percent.
+  return css_parsing_utils::ConsumePercent(
+      stream, context, CSSPrimitiveValue::ValueRange::kNonNegative);
+}
+
 }  // namespace css_longhand
 }  // namespace blink

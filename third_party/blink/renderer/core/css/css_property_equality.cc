@@ -346,6 +346,8 @@ bool CSSPropertyEquality::PropertiesEqual(const PropertyHandle& property,
       return a.DominantBaseline() == b.DominantBaseline();
     case CSSPropertyID::kDynamicRangeLimit:
       return a.GetDynamicRangeLimit() == b.GetDynamicRangeLimit();
+    case CSSPropertyID::kElectronCornerSmoothing:
+      return a.ElectronCornerSmoothing() == b.ElectronCornerSmoothing();
     case CSSPropertyID::kEmptyCells:
       return a.EmptyCells() == b.EmptyCells();
     case CSSPropertyID::kFill:
