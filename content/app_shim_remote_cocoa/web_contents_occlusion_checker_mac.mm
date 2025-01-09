@@ -19,6 +19,12 @@
 #include "content/public/browser/content_browser_client.h"
 #include "content/public/common/content_client.h"
 
+using features::kMacWebContentsOcclusion;
+
+// Experiment features.
+const base::FeatureParam<bool> kEnhancedWindowOcclusionDetection{
+    &kMacWebContentsOcclusion, "EnhancedWindowOcclusionDetection", false};
+
 namespace {
 
 NSString* const kWindowDidChangePositionInWindowList =
@@ -127,7 +133,8 @@ bool IsBrowserProcess() {
 
 - (BOOL)isManualOcclusionDetectionEnabled {
   return [WebContentsOcclusionCheckerMac
-      manualOcclusionDetectionSupportedForCurrentMacOSVersion];
+             manualOcclusionDetectionSupportedForCurrentMacOSVersion] &&
+         kEnhancedWindowOcclusionDetection.Get();
 }
 
 // Alternative implementation of orderWindow:relativeTo:. Replaces

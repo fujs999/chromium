@@ -13,6 +13,8 @@
 #include "content/common/web_contents_ns_view_bridge.mojom.h"
 
 extern CONTENT_EXPORT const base::FeatureParam<bool>
+    kEnhancedWindowOcclusionDetection;
+extern CONTENT_EXPORT const base::FeatureParam<bool>
     kDisplaySleepAndAppHideDetection;
 
 // The WebContentsOcclusionCheckerMac performs window occlusion checks
