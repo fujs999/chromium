@@ -101,6 +101,8 @@ std::string GetPermissionString(PermissionType permission) {
       return "WebAppInstallation";
     case PermissionType::LOCAL_NETWORK_ACCESS:
       return "LocalNetworkAccess";
+    case PermissionType::DEPRECATED_SYNC_CLIPBOARD_READ:
+      return "DeprecatedSyncClipboardRead";
     case PermissionType::NUM:
       NOTREACHED();
   }
@@ -175,6 +177,7 @@ PermissionTypeToPermissionsPolicyFeature(PermissionType permission) {
     case PermissionType::POINTER_LOCK:
     // TODO(crbug.com/394009026): Add permission policy for LNA.
     case PermissionType::LOCAL_NETWORK_ACCESS:
+    case PermissionType::DEPRECATED_SYNC_CLIPBOARD_READ:
       return std::nullopt;
 
     case PermissionType::NUM:

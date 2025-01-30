@@ -87,6 +87,7 @@ PermissionToSchedulingFeature(PermissionType permission_name) {
     case PermissionType::AUTOMATIC_FULLSCREEN:
     case PermissionType::WEB_APP_INSTALLATION:
     case PermissionType::LOCAL_NETWORK_ACCESS:
+    case PermissionType::DEPRECATED_SYNC_CLIPBOARD_READ:
       return std::nullopt;
   }
 }

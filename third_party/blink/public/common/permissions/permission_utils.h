@@ -65,6 +65,7 @@ enum class PermissionType {
   HAND_TRACKING = 41,
   WEB_APP_INSTALLATION = 42,
   LOCAL_NETWORK_ACCESS = 43,
+  DEPRECATED_SYNC_CLIPBOARD_READ = 44,
 
   // Always keep this at the end.
   NUM,

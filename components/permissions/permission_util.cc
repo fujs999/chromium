@@ -389,6 +389,7 @@ ContentSettingsType PermissionUtil::PermissionTypeToContentSettingsTypeSafe(
       return ContentSettingsType::WEB_APP_INSTALLATION;
     case PermissionType::LOCAL_NETWORK_ACCESS:
       return ContentSettingsType::LOCAL_NETWORK_ACCESS;
+    case PermissionType::DEPRECATED_SYNC_CLIPBOARD_READ:
     case PermissionType::NUM:
       break;
   }
