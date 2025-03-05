@@ -760,20 +760,29 @@ void MessagePumpUIApplication::Detach() {
 
 #else
 
+static int g_private_mode_ref_count = 0;
+
 ScopedPumpMessagesInPrivateModes::ScopedPumpMessagesInPrivateModes() {
   DCHECK(g_app_pump);
-  DCHECK_EQ(kNSApplicationModalSafeModeMask, g_app_pump->GetModeMask());
   // Pumping events in private runloop modes is known to interact badly with
   // app modal windows like NSAlert.
   if (NSApp.modalWindow) {
     return;
   }
-  g_app_pump->SetModeMask(kAllModesMask);
+
+  g_private_mode_ref_count += 1;
+  if (g_private_mode_ref_count == 1) {
+    g_app_pump->SetModeMask(kAllModesMask);
+  }
 }
 
 ScopedPumpMessagesInPrivateModes::~ScopedPumpMessagesInPrivateModes() {
   DCHECK(g_app_pump);
-  g_app_pump->SetModeMask(kNSApplicationModalSafeModeMask);
+  DCHECK(g_private_mode_ref_count > 0);
+  g_private_mode_ref_count -= 1;
+  if (g_private_mode_ref_count == 0) {
+    g_app_pump->SetModeMask(kNSApplicationModalSafeModeMask);
+  }
 }
 
 int ScopedPumpMessagesInPrivateModes::GetModeMaskForTest() {
