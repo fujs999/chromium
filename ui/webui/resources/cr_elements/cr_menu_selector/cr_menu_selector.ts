@@ -74,6 +74,7 @@ export class CrMenuSelector extends CrMenuSelectorBase {
     const items = this.getAllFocusableItems_();
     assert(items.length >= 1);
     const currentFocusedIndex =
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
         items.indexOf(this.querySelector<HTMLElement>(':focus')!);
 
     let newFocusedIndex = currentFocusedIndex;
