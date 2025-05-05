@@ -169,6 +169,10 @@ void DesktopWindowTreeHostWin::FinishTouchDrag(gfx::Point screen_point) {
   }
 }
 
+void DesktopWindowTreeHostWin::SetIsTranslucent(bool is_translucent) {
+  message_handler_->set_is_translucent(is_translucent);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // DesktopWindowTreeHostWin, WidgetObserver implementation:
 void DesktopWindowTreeHostWin::OnWidgetThemeChanged(Widget* widget) {

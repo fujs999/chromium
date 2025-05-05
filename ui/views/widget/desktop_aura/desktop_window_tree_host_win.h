@@ -93,6 +93,8 @@ class VIEWS_EXPORT DesktopWindowTreeHostWin : public DesktopWindowTreeHost,
   // false.
   void FinishTouchDrag(gfx::Point screen_point);
 
+  void SetIsTranslucent(bool is_translucent);
+
  protected:
   // Overridden from DesktopWindowTreeHost:
   void Init(const Widget::InitParams& params) override;
