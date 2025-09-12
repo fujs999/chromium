@@ -100,8 +100,8 @@ void DrmRenderNodePathFinder::FindDrmRenderNodePath() {
     return;
   }
 
-  static constexpr const char* preferred_drivers[3] = {"i915", "amdgpu",
-                                                       "virtio_gpu"};
+  static constexpr const char* preferred_drivers[4] = {"i915", "amdgpu",
+                                                       "virtio_gpu", "rockchip"};
   for (const char* preferred_driver : preferred_drivers) {
     for (const auto& [driver, node] : driver_to_nodes) {
       if (driver == preferred_driver) {
