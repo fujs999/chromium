@@ -39,11 +39,13 @@
 /cld_2/src
 /cronet_android_mainline_clang/linux-amd64
 /cros
+/crossbench-web-tests/
 /custom_tabs_client/src
 /cygwin
 /data_sharing_sdk
 /devserver
 /directxsdk
+/dragonbox/
 /edk2
 /electron_node
 /elfutils/src
@@ -51,6 +53,7 @@
 /espresso/lib/
 /eyesfree/src
 /fast_float/src
+/federated_compute/
 /fuchsia-sdk/images
 /fuchsia-sdk/images-internal
 /fuchsia-sdk/sdk
@@ -80,6 +83,7 @@
 /libei/cipd/lib64/
 /libgifcodec
 /libjingle/source
+/libpfm4/
 /libupnp
 /libva-fake-driver/src
 /llvm
@@ -104,6 +108,7 @@
 /node/node_modules/
 /node/win
 /nss
+/oak/
 /omaha/src/omaha
 /pdfsqueeze
 /pefile
@@ -121,6 +126,7 @@
 /qemu-linux-arm64
 /qemu-linux-x64
 /qemu-mac-x64
+/readability/
 /rust-src
 /rust-toolchain-intermediate
 /rust-toolchain/
