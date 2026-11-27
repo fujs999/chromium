@@ -77,6 +77,8 @@ source_set("vaapi") {
     sources += [
       "h265_vaapi_video_decoder_delegate.cc",
       "h265_vaapi_video_decoder_delegate.h",
+      "h265_vaapi_video_encoder_delegate.cc",
+      "h265_vaapi_video_encoder_delegate.h",
     ]
   }
 
@@ -194,6 +196,9 @@ source_set("unit_test") {
     "vaapi_wrapper_unittest.cc",
     "vp9_vaapi_video_encoder_delegate_unittest.cc",
   ]
+  if (enable_hevc_parser_and_hw_decoder) {
+    sources += [ "h265_vaapi_video_encoder_delegate_unittest.cc" ]
+  }
   deps = [
     ":common",
     ":vaapi",

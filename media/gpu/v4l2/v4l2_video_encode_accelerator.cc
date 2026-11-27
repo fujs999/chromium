@@ -50,8 +50,13 @@
 #include "media/gpu/gpu_video_encode_accelerator_helpers.h"
 #include "media/gpu/macros.h"
 #include "media/gpu/v4l2/v4l2_utils.h"
+#include "media/media_buildflags.h"
 #include "media/parsers/h264_level_limits.h"
 #include "media/parsers/h264_parser.h"
+
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+#include "media/gpu/h265_level_utils.h"
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
 
 #ifndef V4L2_CID_MPEG_VIDEO_H264_HIER_CODING_L0_BR
 #define V4L2_CID_MPEG_VIDEO_H264_HIER_CODING_L0_BR (V4L2_CID_CODEC_BASE + 391)
@@ -110,8 +115,9 @@ std::optional<ImageProcessor::PortConfig> VideoFrameLayoutToPortConfig(
 // Create Layout from |layout| with is_multi_planar = true.
 std::optional<VideoFrameLayout> AsMultiPlanarLayout(
     const VideoFrameLayout& layout) {
-  if (layout.is_multi_planar())
+  if (layout.is_multi_planar()) {
     return std::make_optional<VideoFrameLayout>(layout);
+  }
   return VideoFrameLayout::CreateMultiPlanar(
       layout.format(), layout.coded_size(), layout.planes());
 }
@@ -238,6 +244,14 @@ EncoderStatus V4L2VideoEncodeAccelerator::Initialize(
             << base::strict_cast<size_t>(num_temporal_layers);
         return {EncoderStatus::Codes::kEncoderInitializationError};
       }
+    } else if (VideoCodecProfileToVideoCodec(config.output_profile) ==
+               VideoCodec::kHEVC) {
+      // The HEVC bitstream metadata needed by the clients for temporal layers
+      // is not produced here, so silently falling back to L1T1 would break
+      // them. Fail instead so that they can pick another configuration.
+      MEDIA_LOG(ERROR, media_log.get())
+          << "Temporal layer encoding is not supported for HEVC";
+      return {EncoderStatus::Codes::kEncoderInitializationError};
     } else {
       MEDIA_LOG(WARNING, media_log.get())
           << GetProfileName(config.output_profile)
@@ -287,8 +301,9 @@ EncoderStatus V4L2VideoEncodeAccelerator::Initialize(
   memset(&cmd, 0, sizeof(cmd));
   cmd.cmd = V4L2_ENC_CMD_STOP;
   is_flush_supported_ = (device_->Ioctl(VIDIOC_TRY_ENCODER_CMD, &cmd) == 0);
-  if (!is_flush_supported_)
+  if (!is_flush_supported_) {
     VLOGF(2) << "V4L2_ENC_CMD_STOP is not supported.";
+  }
 
   struct v4l2_capability caps;
   memset(&caps, 0, sizeof(caps));
@@ -424,8 +439,9 @@ void V4L2VideoEncodeAccelerator::InitializeTask(const Config& config) {
   // input_frame_size_ is the size of input_config of |image_processor_|.
   // On native_input_mode_, since the passed size in RequireBitstreamBuffers()
   // is ignored by the client, we don't update the expected frame size.
-  if (!native_input_mode_ && image_processor_.get())
+  if (!native_input_mode_ && image_processor_.get()) {
     input_frame_size_ = image_processor_->input_config().size;
+  }
 
   child_task_runner_->PostTask(
       FROM_HERE, base::BindOnce(&Client::RequireBitstreamBuffers, client_,
@@ -708,7 +724,25 @@ bool V4L2VideoEncodeAccelerator::IsFlushSupported() {
 VideoEncodeAccelerator::SupportedProfiles
 V4L2VideoEncodeAccelerator::GetSupportedProfiles() {
   auto device = base::MakeRefCounted<V4L2Device>();
-  return device->GetSupportedEncodeProfiles();
+  VideoEncodeAccelerator::SupportedProfiles profiles =
+      device->GetSupportedEncodeProfiles();
+
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+  // HEVC encoding is only exposed when the feature is enabled, and only for
+  // the Main profile, which is the only one InitControlsHEVC() configures.
+  const bool is_hevc_encoder_enabled =
+      base::FeatureList::IsEnabled(kPlatformHEVCEncoderSupport);
+#else
+  const bool is_hevc_encoder_enabled = false;
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+  std::erase_if(profiles, [is_hevc_encoder_enabled](const auto& profile) {
+    if (VideoCodecProfileToVideoCodec(profile.profile) != VideoCodec::kHEVC) {
+      return false;
+    }
+    return !is_hevc_encoder_enabled || profile.profile != HEVCPROFILE_MAIN;
+  });
+
+  return profiles;
 }
 
 void V4L2VideoEncodeAccelerator::FrameProcessed(
@@ -849,7 +883,7 @@ size_t V4L2VideoEncodeAccelerator::CopyIntoOutputBuffer(
           break;
         }
         if (cached_h264_header_size_ + nalu.size + kH264StartCodeSize >
-                remaining_dst_size) {
+            remaining_dst_size) {
           VLOGF(1) << "Not enough space to inject a stream header before IDR";
           break;
         }
@@ -915,8 +949,9 @@ void V4L2VideoEncodeAccelerator::EncodeTask(scoped_refptr<VideoFrame> frame,
     }
 
     if (encoder_state_ == kInitialized) {
-      if (!StartDevicePoll())
+      if (!StartDevicePoll()) {
         return;
+      }
       encoder_state_ = kEncoding;
     }
   }
@@ -1045,14 +1080,17 @@ void V4L2VideoEncodeAccelerator::InputImageProcessorTask() {
 
   MaybeFlushImageProcessor();
 
-  if (free_image_processor_output_buffer_indices_.empty())
+  if (free_image_processor_output_buffer_indices_.empty()) {
     return;
-  if (image_processor_input_queue_.empty())
+  }
+  if (image_processor_input_queue_.empty()) {
     return;
+  }
   // The flush request is at the top. Waiting until all frames are processed by
   // the image processor.
-  if (!image_processor_input_queue_.front().frame)
+  if (!image_processor_input_queue_.front().frame) {
     return;
+  }
 
   const size_t output_buffer_index =
       free_image_processor_output_buffer_indices_.back();
@@ -1106,8 +1144,9 @@ void V4L2VideoEncodeAccelerator::UseOutputBitstreamBufferTask(
   PumpBitstreamBuffers();
 
   if (encoder_state_ == kInitialized) {
-    if (!StartDevicePoll())
+    if (!StartDevicePoll()) {
       return;
+    }
     encoder_state_ = kEncoding;
   }
 }
@@ -1148,8 +1187,9 @@ void V4L2VideoEncodeAccelerator::ServiceDeviceTask() {
   Enqueue();
 
   // Clear the interrupt fd.
-  if (!device_->ClearDevicePollInterrupt())
+  if (!device_->ClearDevicePollInterrupt()) {
     return;
+  }
 
   // Device can be polled as soon as either input or output buffers are queued.
   bool poll_device = (input_queue_->QueuedBuffersCount() +
@@ -1234,8 +1274,9 @@ void V4L2VideoEncodeAccelerator::Enqueue() {
 
         // We may have failed to preserve buffer affinity, fallback to any
         // buffer in that case.
-        if (!input_buffer)
+        if (!input_buffer) {
           input_buffer = input_queue_->GetFreeBuffer();
+        }
         break;
       default:
         input_buffer = input_queue_->GetFreeBuffer();
@@ -1244,14 +1285,16 @@ void V4L2VideoEncodeAccelerator::Enqueue() {
     // input_buffer cannot be std::nullopt since we checked for
     // input_queue_->FreeBuffersCount() > 0 before entering the loop.
     DCHECK(input_buffer);
-    if (!EnqueueInputRecord(std::move(*input_buffer)))
+    if (!EnqueueInputRecord(std::move(*input_buffer))) {
       return;
+    }
   }
   if (old_inputs_queued == 0 && input_queue_->QueuedBuffersCount() != 0) {
     // We just started up a previously empty queue.
     // Queue state changed; signal interrupt.
-    if (!device_->SetDevicePollInterrupt())
+    if (!device_->SetDevicePollInterrupt()) {
       return;
+    }
     // Shall call VIDIOC_STREAMON if we haven't yet.
     do_streamon = !input_queue_->IsStreaming();
   }
@@ -1266,14 +1309,16 @@ void V4L2VideoEncodeAccelerator::Enqueue() {
   // Enqueue all the outputs we can.
   const size_t old_outputs_queued = output_queue_->QueuedBuffersCount();
   while (auto output_buffer = output_queue_->GetFreeBuffer()) {
-    if (!EnqueueOutputRecord(std::move(*output_buffer)))
+    if (!EnqueueOutputRecord(std::move(*output_buffer))) {
       return;
+    }
   }
   if (old_outputs_queued == 0 && output_queue_->QueuedBuffersCount() != 0) {
     // We just started up a previously empty queue.
     // Queue state changed; signal interrupt.
-    if (!device_->SetDevicePollInterrupt())
+    if (!device_->SetDevicePollInterrupt()) {
       return;
+    }
   }
 
   // STREAMON in CAPTURE queue first and then OUTPUT queue.
@@ -1325,8 +1370,9 @@ void V4L2VideoEncodeAccelerator::Dequeue() {
 
     InputRecord& input_record = input_buffer_map_[ret.second->BufferId()];
     input_record.frame = nullptr;
-    if (input_record.ip_output_buffer_index)
+    if (input_record.ip_output_buffer_index) {
       ReuseImageProcessorOutputBuffer(*input_record.ip_output_buffer_index);
+    }
   }
 
   // Dequeue completed output (VIDEO_CAPTURE) buffers, and recycle to the
@@ -1359,8 +1405,9 @@ void V4L2VideoEncodeAccelerator::Dequeue() {
     buffer_dequeued = true;
   }
 
-  if (buffer_dequeued)
+  if (buffer_dequeued) {
     PumpBitstreamBuffers();
+  }
 }
 
 void V4L2VideoEncodeAccelerator::PumpBitstreamBuffers() {
@@ -1643,16 +1690,20 @@ bool V4L2VideoEncodeAccelerator::StopDevicePoll() {
   }
   // Tegra driver cannot call Streamoff() when the stream is off, so we check
   // IsStreaming() first.
-  if (input_queue_ && input_queue_->IsStreaming() && !input_queue_->Streamoff())
+  if (input_queue_ && input_queue_->IsStreaming() &&
+      !input_queue_->Streamoff()) {
     return false;
+  }
 
   if (output_queue_ && output_queue_->IsStreaming() &&
-      !output_queue_->Streamoff())
+      !output_queue_->Streamoff()) {
     return false;
+  }
 
   // Reset all our accounting info.
-  while (!encoder_input_queue_.empty())
+  while (!encoder_input_queue_.empty()) {
     encoder_input_queue_.pop();
+  }
   for (auto& [frame, ip_output_buffer_index] : input_buffer_map_) {
     frame = nullptr;
   }
@@ -1849,8 +1900,9 @@ V4L2VideoEncodeAccelerator::NegotiateInputFormat(VideoPixelFormat input_format,
 
     std::optional<struct v4l2_format> format =
         input_queue_->SetFormat(pix_fmt, size, 0);
-    if (!format)
+    if (!format) {
       continue;
+    }
 
     DVLOGF(3) << "Success: S_FMT with " << FourccToString(pix_fmt);
     device_input_layout_ = V4L2FormatToVideoFrameLayout(*format);
@@ -1952,8 +2004,9 @@ bool V4L2VideoEncodeAccelerator::SetFormats(VideoPixelFormat input_format,
     auto input_layout = GetPlatformVideoFrameLayout(
         input_format, encoder_input_visible_rect_.size(),
         gfx::BufferUsage::VEA_READ_CAMERA_AND_CPU_READ_WRITE);
-    if (!input_layout)
+    if (!input_layout) {
       return false;
+    }
     input_size = gfx::Size(static_cast<int>(input_layout->planes()[0].stride),
                            input_layout->coded_size().height());
   }
@@ -1981,6 +2034,9 @@ bool V4L2VideoEncodeAccelerator::InitControls(const Config& config) {
 
   // Don't expect other output formats.
   CHECK(output_format_fourcc_ == V4L2_PIX_FMT_H264 ||
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+        output_format_fourcc_ == V4L2_PIX_FMT_HEVC ||
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
         output_format_fourcc_ == V4L2_PIX_FMT_VP8);
 
   // Enable frame-level bitrate control. This is the only mandatory control.
@@ -2001,6 +2057,13 @@ bool V4L2VideoEncodeAccelerator::InitControls(const Config& config) {
     case V4L2_PIX_FMT_VP8:
       InitControlsVP8(config);
       break;
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+    case V4L2_PIX_FMT_HEVC:
+      if (!InitControlsHEVC(config)) {
+        return false;
+      }
+      break;
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
     default:
       NOTREACHED() << "Unsupported codec "
                    << FourccToString(output_format_fourcc_);
@@ -2181,6 +2244,99 @@ void V4L2VideoEncodeAccelerator::InitControlsVP8(const Config& config) {
                         V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_VPX_MAX_QP, 117)});
 }
 
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+bool V4L2VideoEncodeAccelerator::InitControlsHEVC(const Config& config) {
+  // Only the Main profile is configured and advertised.
+  if (config.output_profile != HEVCPROFILE_MAIN) {
+    SetErrorState({EncoderStatus::Codes::kEncoderUnsupportedProfile,
+                   base::StrCat({"Unexpected hevc profile: ",
+                                 GetProfileName(config.output_profile)})});
+    return false;
+  }
+
+  // Set the HEVC profile. Encoders that only produce a single profile may not
+  // expose this control at all.
+  if (device_->IsCtrlExposed(V4L2_CID_MPEG_VIDEO_HEVC_PROFILE)) {
+    const int32_t profile_value =
+        V4L2Device::VideoCodecProfileToV4L2HEVCProfile(config.output_profile);
+    if (profile_value < 0 ||
+        !device_->SetExtCtrls(
+            V4L2_CTRL_CLASS_MPEG,
+            {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_HEVC_PROFILE, profile_value)})) {
+      SetErrorState({EncoderStatus::Codes::kEncoderUnsupportedProfile,
+                     base::StrCat({"Unsupported hevc profile: ",
+                                   GetProfileName(config.output_profile)})});
+      return false;
+    }
+  } else {
+    DVLOGF(2) << "V4L2_CID_MPEG_VIDEO_HEVC_PROFILE is not exposed, relying on "
+                 "the device default profile";
+  }
+
+  // Request the parameter sets (VPS, SPS and PPS) to be emitted together with
+  // each IDR frame. There is no bitstream rewriting for HEVC here, i.e.
+  // |inject_sps_and_pps_| only serves H.264, and WebRTC needs the parameter
+  // sets in-band with every key frame. Devices that don't expose these controls
+  // are expected to do so by default.
+#ifndef V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR
+#define V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR (V4L2_CID_MPEG_BASE + 644)
+#endif
+  if (device_->IsCtrlExposed(V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR)) {
+    if (!device_->SetExtCtrls(
+            V4L2_CTRL_CLASS_MPEG,
+            {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR, 1)})) {
+      DVLOGF(1) << "Failed to set V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR";
+    }
+  } else {
+    DVLOGF(2) << "V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR is not exposed";
+  }
+  if (!device_->SetExtCtrls(
+          V4L2_CTRL_CLASS_MPEG,
+          {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_HEADER_MODE,
+                       V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME)})) {
+    DVLOGF(2) << "Failed to set V4L2_CID_MPEG_VIDEO_HEADER_MODE";
+  }
+
+  // Set the HEVC level to the lowest one that fits the stream, falling back to
+  // level 4.0 (general_level_idc = 30 * level).
+  constexpr uint8_t kFallbackHEVCLevelIdc = 120;
+  const uint8_t level_idc =
+      FindValidH265LevelIdc(config.input_visible_size, config.framerate,
+                            config.bitrate.target_bps())
+          .value_or(kFallbackHEVCLevelIdc);
+  const int32_t level_value =
+      V4L2Device::HEVCLevelIdcToV4L2HEVCLevel(level_idc);
+  if (level_value >= 0) {
+    device_->SetExtCtrls(
+        V4L2_CTRL_CLASS_MPEG,
+        {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_HEVC_LEVEL, level_value)});
+  }
+
+  // The remaining controls are optional. Since a driver may not support some
+  // of them, set them one by one and ignore failures.
+  device_->SetExtCtrls(V4L2_CTRL_CLASS_MPEG,
+                       {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_HEVC_TIER,
+                                    V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)});
+
+  // No B-frames, for lowest decoding latency.
+  device_->SetExtCtrls(V4L2_CTRL_CLASS_MPEG,
+                       {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_B_FRAMES, 0)});
+
+  // Quantization parameter range.
+  device_->SetExtCtrls(V4L2_CTRL_CLASS_MPEG,
+                       {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_HEVC_MIN_QP, 10)});
+  device_->SetExtCtrls(V4L2_CTRL_CLASS_MPEG,
+                       {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_HEVC_MAX_QP, 51)});
+
+  device_->SetExtCtrls(
+      V4L2_CTRL_CLASS_MPEG,
+      {V4L2ExtCtrl(V4L2_CID_MPEG_VIDEO_HEVC_LOOP_FILTER_MODE,
+                   V4L2_MPEG_VIDEO_HEVC_LOOP_FILTER_MODE_ENABLED)});
+
+  return true;
+}
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+
 bool V4L2VideoEncodeAccelerator::CreateInputBuffers() {
   VLOGF(2);
   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
@@ -2234,12 +2390,14 @@ void V4L2VideoEncodeAccelerator::DestroyInputBuffers() {
   VLOGF(2);
   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
 
-  if (!input_queue_ || input_queue_->AllocatedBuffersCount() == 0)
+  if (!input_queue_ || input_queue_->AllocatedBuffersCount() == 0) {
     return;
+  }
 
   DCHECK(!input_queue_->IsStreaming());
-  if (!input_queue_->DeallocateBuffers())
+  if (!input_queue_->DeallocateBuffers()) {
     VLOGF(1) << "Failed to deallocate V4L2 input buffers";
+  }
 
   input_buffer_map_.clear();
 }
@@ -2248,12 +2406,14 @@ void V4L2VideoEncodeAccelerator::DestroyOutputBuffers() {
   VLOGF(2);
   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
 
-  if (!output_queue_ || output_queue_->AllocatedBuffersCount() == 0)
+  if (!output_queue_ || output_queue_->AllocatedBuffersCount() == 0) {
     return;
+  }
 
   DCHECK(!output_queue_->IsStreaming());
-  if (!output_queue_->DeallocateBuffers())
+  if (!output_queue_->DeallocateBuffers()) {
     VLOGF(1) << "Failed to deallocate V4L2 output buffers";
+  }
 }
 
 }  // namespace media

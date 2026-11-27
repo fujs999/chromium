@@ -49,9 +49,9 @@ using media_gpu_v4l2::StubPathMap;
 
 inline static constexpr char kLibV4l2Path[] =
 #if defined(__aarch64__)
-      "/usr/lib64/libv4l2.so";
+    "/usr/lib64/libv4l2.so";
 #else
-      "/usr/lib/libv4l2.so";
+    "/usr/lib/libv4l2.so";
 #endif
 
 namespace media {
@@ -122,8 +122,9 @@ scoped_refptr<V4L2Queue> V4L2Device::GetQueue(enum v4l2_buf_type type) {
   // TODO(acourbot): we should instead query the device for available queues,
   // and allocate them accordingly. This will do for now though.
   auto it = queues_.find(type);
-  if (it != queues_.end())
+  if (it != queues_.end()) {
     return scoped_refptr<V4L2Queue>(it->second);
+  }
 
   scoped_refptr<V4L2Queue> queue = V4L2QueueFactory::CreateQueue(
       this, type, base::BindOnce(&V4L2Device::OnQueueDestroyed, this, type));
@@ -254,6 +255,59 @@ int32_t V4L2Device::H264LevelIdcToV4L2H264Level(uint8_t level_idc) {
 }
 
 // static
+int32_t V4L2Device::VideoCodecProfileToV4L2HEVCProfile(
+    VideoCodecProfile profile) {
+  switch (profile) {
+    case HEVCPROFILE_MAIN:
+      return V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
+    case HEVCPROFILE_MAIN10:
+      return V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10;
+    case HEVCPROFILE_MAIN_STILL_PICTURE:
+      return V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE;
+    default:
+      DVLOGF(1) << "Add more HEVC cases as needed";
+      return -1;
+  }
+}
+
+// static
+int32_t V4L2Device::HEVCLevelIdcToV4L2HEVCLevel(uint8_t level_idc) {
+  // HEVC level_idc is 30 * level, e.g., level 4.0 = 120, level 5.1 = 153
+  switch (level_idc) {
+    case 30:  // Level 1.0
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_1;
+    case 60:  // Level 2.0
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_2;
+    case 63:  // Level 2.1
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_2_1;
+    case 90:  // Level 3.0
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_3;
+    case 93:  // Level 3.1
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_3_1;
+    case 120:  // Level 4.0
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_4;
+    case 123:  // Level 4.1
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1;
+    case 150:  // Level 5.0
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_5;
+    case 153:  // Level 5.1
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1;
+    case 156:  // Level 5.2
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_5_2;
+    case 180:  // Level 6.0
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_6;
+    case 183:  // Level 6.1
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1;
+    case 186:  // Level 6.2
+      return V4L2_MPEG_VIDEO_HEVC_LEVEL_6_2;
+    default:
+      DVLOGF(1) << "Unrecognized HEVC level_idc: "
+                << static_cast<int>(level_idc);
+      return -1;
+  }
+}
+
+// static
 gfx::Size V4L2Device::AllocatedSizeFromV4L2Format(
     const struct v4l2_format& format) {
   gfx::Size coded_size;
@@ -311,8 +365,9 @@ gfx::Size V4L2Device::AllocatedSizeFromV4L2Format(
 
   // Adding up bpp for each component will give us total bpp for all components.
   int total_bpp = 0;
-  for (size_t i = 0; i < VideoFrame::NumPlanes(frame_format); ++i)
+  for (size_t i = 0; i < VideoFrame::NumPlanes(frame_format); ++i) {
     total_bpp += VideoFrame::PlaneBitsPerPixel(frame_format, i);
+  }
 
   if (sizeimage == 0 || bytesperline == 0 || plane_horiz_bits_per_pixel == 0 ||
       total_bpp == 0 || (bytesperline * 8) % plane_horiz_bits_per_pixel != 0) {
@@ -344,8 +399,9 @@ gfx::Size V4L2Device::AllocatedSizeFromV4L2Format(
 int V4L2Device::Ioctl(int request, void* arg) {
   DCHECK(device_fd_.is_valid());
 
-  if (use_libv4l2_)
+  if (use_libv4l2_) {
     return HANDLE_EINTR(v4l2_ioctl(device_fd_.get(), request, arg));
+  }
 
   return HANDLE_EINTR(ioctl(device_fd_.get(), request, arg));
 }
@@ -385,8 +441,9 @@ void* V4L2Device::Mmap(void* addr,
                        int flags,
                        unsigned int offset) {
   DCHECK(device_fd_.is_valid());
-  if (use_libv4l2_)
+  if (use_libv4l2_) {
     return v4l2_mmap(addr, len, prot, flags, device_fd_.get(), offset);
+  }
   return mmap(addr, len, prot, flags, device_fd_.get(), offset);
 }
 
@@ -431,10 +488,10 @@ bool V4L2Device::ClearDevicePollInterrupt() {
 
 bool V4L2Device::CanCreateEGLImageFrom(const Fourcc fourcc) const {
   static uint32_t kEGLImageDrmFmtsSupported[] = {
-    DRM_FORMAT_ARGB8888,
+      DRM_FORMAT_ARGB8888,
 #if defined(ARCH_CPU_ARM_FAMILY)
-    DRM_FORMAT_NV12,
-    DRM_FORMAT_YVU420,
+      DRM_FORMAT_NV12,
+      DRM_FORMAT_YVU420,
 #endif
   };
 
@@ -666,8 +723,9 @@ bool V4L2Device::StartPolling(V4L2DevicePoller::EventCallback event_callback,
   bool ret = device_poller_->StartPolling(std::move(event_callback),
                                           std::move(error_callback));
 
-  if (!ret)
+  if (!ret) {
     device_poller_ = nullptr;
+  }
 
   return ret;
 }
@@ -681,8 +739,9 @@ bool V4L2Device::StopPolling() {
 void V4L2Device::SchedulePoll() {
   DCHECK_CALLED_ON_VALID_SEQUENCE(client_sequence_checker_);
 
-  if (!device_poller_ || !device_poller_->IsPolling())
+  if (!device_poller_ || !device_poller_->IsPolling()) {
     return;
+  }
 
   device_poller_->SchedulePoll();
 }
@@ -705,8 +764,9 @@ std::optional<struct v4l2_event> V4L2Device::DequeueEvent() {
 V4L2RequestsQueue* V4L2Device::GetRequestsQueue() {
   DCHECK_CALLED_ON_VALID_SEQUENCE(client_sequence_checker_);
 
-  if (requests_queue_creation_called_)
+  if (requests_queue_creation_called_) {
     return requests_queue_.get();
+  }
 
   requests_queue_creation_called_ = true;
 
@@ -801,8 +861,9 @@ bool V4L2Device::SetExtCtrls(uint32_t ctrl_class,
                              V4L2RequestRef* request_ref) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(client_sequence_checker_);
 
-  if (ctrls.empty())
+  if (ctrls.empty()) {
     return true;
+  }
 
   struct v4l2_ext_controls ext_ctrls;
   memset(&ext_ctrls, 0, sizeof(ext_ctrls));
@@ -816,20 +877,22 @@ bool V4L2Device::SetExtCtrls(uint32_t ctrl_class,
   ext_ctrls.count = ctrls.size();
   ext_ctrls.controls = &ctrls[0].ctrl;
 
-  if (request_ref)
+  if (request_ref) {
     request_ref->ApplyCtrls(&ext_ctrls);
+  }
 
   const int result = Ioctl(VIDIOC_S_EXT_CTRLS, &ext_ctrls);
   if (result < 0) {
     RecordVidiocIoctlErrorUMA(VidiocIoctlRequests::kVidiocSExtCtrls);
-    if (ext_ctrls.error_idx == ext_ctrls.count)
+    if (ext_ctrls.error_idx == ext_ctrls.count) {
       VPLOGF(1) << "VIDIOC_S_EXT_CTRLS: validation failed while trying to set "
                    "controls";
-    else
+    } else {
       VPLOGF(1) << "VIDIOC_S_EXT_CTRLS: unable to set control (0x" << std::hex
                 << ctrls[ext_ctrls.error_idx].ctrl.id << ") at index ("
                 << ext_ctrls.error_idx << ")  to 0x"
                 << ctrls[ext_ctrls.error_idx].ctrl.value;
+    }
   }
 
   return result == 0;
@@ -884,8 +947,9 @@ bool V4L2Device::OpenDevicePath(const std::string& path) {
 
   device_fd_.reset(
       HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC)));
-  if (!device_fd_.is_valid())
+  if (!device_fd_.is_valid()) {
     return false;
+  }
 
   StubPathMap paths;
   paths[kModuleV4l2].push_back(kLibV4l2Path);
@@ -895,7 +959,7 @@ bool V4L2Device::OpenDevicePath(const std::string& path) {
     VLOGF(1) << "Failed to initialize LIBV4L2 libs";
   } else {
     if (HANDLE_EINTR(v4l2_fd_open(device_fd_.get(), V4L2_DISABLE_CONVERSION)) !=
-            -1) {
+        -1) {
       DVLOGF(3) << "Using libv4l2 for " << path;
       use_libv4l2_ = true;
     }
@@ -905,14 +969,15 @@ bool V4L2Device::OpenDevicePath(const std::string& path) {
 
 void V4L2Device::CloseDevice() {
   DVLOGF(3);
-  if (use_libv4l2_ && device_fd_.is_valid())
+  if (use_libv4l2_ && device_fd_.is_valid()) {
     v4l2_close(device_fd_.release());
+  }
   device_fd_.reset();
 }
 
 void V4L2Device::EnumerateDevicesForType(Type type) {
 // HACK: We are using chromeos style devices.
-#if 1 //BUILDFLAG(IS_CHROMEOS)
+#if 1  // BUILDFLAG(IS_CHROMEOS)
   static const std::string kDecoderDevicePattern = "/dev/video-dec";
   static const std::string kEncoderDevicePattern = "/dev/video-enc";
   static const std::string kImageProcessorDevicePattern = "/dev/image-proc";

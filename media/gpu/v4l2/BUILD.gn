@@ -159,6 +159,7 @@ source_set("unit_test") {
   testonly = true
   sources = [
     "v4l2_utils_unittest.cc",
+    "v4l2_vda_helpers_unittest.cc",
     "v4l2_vp9_helpers_unittest.cc",
   ]
   deps = [

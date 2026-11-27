@@ -318,12 +318,15 @@ BASE_FEATURE(kPlatformHEVCDecoderSupport,
              "PlatformHEVCDecoderSupport",
              base::FEATURE_ENABLED_BY_DEFAULT);
 
-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID)
-// Enables HEVC hardware accelerated encoding for Windows, Mac, and Android.
+#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID) || \
+    BUILDFLAG(IS_LINUX)
+// Enables HEVC hardware accelerated encoding for Windows, Mac, Android, and
+// Linux.
 BASE_FEATURE(kPlatformHEVCEncoderSupport,
              "PlatformHEVCEncoderSupport",
              base::FEATURE_ENABLED_BY_DEFAULT);
-#endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID)
+#endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID) ||
+        // BUILDFLAG(IS_LINUX)
 #endif  // BUILDFLAG(ENABLE_PLATFORM_HEVC)
 
 #if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
@@ -705,7 +708,7 @@ BASE_FEATURE(kUnifiedAutoplay,
 // on chromeos, but needs an experiment on linux.
 BASE_FEATURE(kAcceleratedVideoDecodeLinux,
              "AcceleratedVideoDecoder",
-#if BUILDFLAG(USE_VAAPI)
+#if BUILDFLAG(USE_VAAPI) || BUILDFLAG(ENABLE_LINUX_HW_VIDEO_CODECS_BY_DEFAULT)
              base::FEATURE_ENABLED_BY_DEFAULT);
 #else
              base::FEATURE_DISABLED_BY_DEFAULT);
@@ -713,11 +716,19 @@ BASE_FEATURE(kAcceleratedVideoDecodeLinux,
 
 BASE_FEATURE(kAcceleratedVideoDecodeLinuxGL,
              "AcceleratedVideoDecodeLinuxGL",
+#if BUILDFLAG(ENABLE_LINUX_HW_VIDEO_CODECS_BY_DEFAULT)
+             base::FEATURE_ENABLED_BY_DEFAULT);
+#else
              base::FEATURE_DISABLED_BY_DEFAULT);
+#endif
 
 BASE_FEATURE(kAcceleratedVideoEncodeLinux,
              "AcceleratedVideoEncoder",
+#if BUILDFLAG(ENABLE_LINUX_HW_VIDEO_CODECS_BY_DEFAULT)
+             base::FEATURE_ENABLED_BY_DEFAULT);
+#else
              base::FEATURE_DISABLED_BY_DEFAULT);
+#endif
 
 // Ignore the non-intel driver blacklist for VaapiVideoDecoder implementations.
 // Intended for manual usage only in order to gague the status of newer driver

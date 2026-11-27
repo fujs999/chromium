@@ -123,6 +123,7 @@ class VaapiVideoEncoderDelegate {
     VABufferID coded_buffer_id() const;
     VASurfaceID input_surface_id() const;
     const scoped_refptr<CodecPicture>& picture() const;
+
    private:
     // True if this job is to produce a keyframe.
     bool keyframe_;
@@ -186,6 +187,7 @@ class VaapiVideoEncoderDelegate {
  protected:
   // Friend in order o access PrepareEncodeJobResult declaration.
   friend class H264VaapiVideoEncoderDelegateTest;
+  friend class H265VaapiVideoEncoderDelegateTest;
   friend class VP9VaapiVideoEncoderDelegateTest;
   friend class VaapiVideoEncodeAcceleratorTest;
 

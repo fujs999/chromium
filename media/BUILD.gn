@@ -49,6 +49,7 @@ buildflag_header("media_buildflags") {
     "ENABLE_LIBAOM=$enable_libaom",
     "ENABLE_LIBRARY_CDMS=$enable_library_cdms",
     "ENABLE_LIBVPX=$media_use_libvpx",
+    "ENABLE_LINUX_HW_VIDEO_CODECS_BY_DEFAULT=$enable_linux_hw_video_codecs_by_default",
     "ENABLE_LOGGING_OVERRIDE=$enable_logging_override",
     "ENABLE_MEDIA_DRM_STORAGE=$enable_media_drm_storage",
     "ENABLE_MEDIA_REMOTING=$enable_media_remoting",

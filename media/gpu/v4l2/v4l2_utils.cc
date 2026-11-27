@@ -52,9 +52,9 @@
 #define V4L2_CID_MPEG_VIDEO_AV1_PROFILE (V4L2_CID_MPEG_BASE + 655)
 #endif
 enum v4l2_mpeg_video_av1_profile {
-       V4L2_MPEG_VIDEO_AV1_PROFILE_MAIN = 0,
-       V4L2_MPEG_VIDEO_AV1_PROFILE_HIGH = 1,
-       V4L2_MPEG_VIDEO_AV1_PROFILE_PROFESSIONAL = 2,
+  V4L2_MPEG_VIDEO_AV1_PROFILE_MAIN = 0,
+  V4L2_MPEG_VIDEO_AV1_PROFILE_HIGH = 1,
+  V4L2_MPEG_VIDEO_AV1_PROFILE_PROFESSIONAL = 2,
 };
 #endif
 
@@ -68,17 +68,18 @@ using media_gpu_v4l2::StubPathMap;
 
 inline static constexpr char kLibV4l2Path[] =
 #if defined(__aarch64__)
-      "/usr/lib64/libv4l2.so";
+    "/usr/lib64/libv4l2.so";
 #else
-      "/usr/lib/libv4l2.so";
+    "/usr/lib/libv4l2.so";
 #endif
 
 static bool use_libv4l2_ = false;
 
 namespace {
 int HandledIoctl(int fd, int request, void* arg) {
-  if (use_libv4l2_)
+  if (use_libv4l2_) {
     return HANDLE_EINTR(v4l2_ioctl(fd, request, arg));
+  }
   return HANDLE_EINTR(ioctl(fd, request, arg));
 }
 
@@ -360,6 +361,9 @@ static const std::map<v4l2_enum_type, v4l2_enum_type>
         {V4L2_PIX_FMT_H264, V4L2_CID_MPEG_VIDEO_H264_PROFILE},
         {V4L2_PIX_FMT_H264_SLICE, V4L2_CID_MPEG_VIDEO_H264_PROFILE},
 #if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+        // The stateful HEVC format is used by both the stateful decoder and
+        // the encoder.
+        {V4L2_PIX_FMT_HEVC, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE},
         {V4L2_PIX_FMT_HEVC_SLICE, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE},
 #endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
         {V4L2_PIX_FMT_VP8, V4L2_CID_MPEG_VIDEO_VP8_PROFILE},
@@ -602,7 +606,7 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
   std::vector<std::string> candidate_paths;
 
 // HACK: We are using chromeos style devices.
-#if 1 //BUILDFLAG(IS_CHROMEOS)
+#if 1  // BUILDFLAG(IS_CHROMEOS)
   constexpr char kVideoDevicePattern[] = "/dev/video-dec0";
   candidate_paths.push_back(kVideoDevicePattern);
 #else
@@ -619,8 +623,9 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
   paths[kModuleV4l2].push_back(kLibV4l2Path);
 
   static bool libv4l2_initialized = InitializeStubs(paths);
-  if (!libv4l2_initialized)
+  if (!libv4l2_initialized) {
     VLOGF(1) << "Failed to initialize LIBV4L2 libs";
+  }
 
   for (const auto& path : candidate_paths) {
     base::ScopedFD device_fd(
@@ -632,8 +637,8 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
 
     use_libv4l2_ = false;
     if (libv4l2_initialized) {
-      if (HANDLE_EINTR(v4l2_fd_open(device_fd.get(), V4L2_DISABLE_CONVERSION)) !=
-          -1) {
+      if (HANDLE_EINTR(
+              v4l2_fd_open(device_fd.get(), V4L2_DISABLE_CONVERSION)) != -1) {
         DVLOGF(3) << "Using libv4l2 for " << path;
         use_libv4l2_ = true;
       }
@@ -666,8 +671,9 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
       }
     }
 
-    if (use_libv4l2_ && device_fd.is_valid())
+    if (use_libv4l2_ && device_fd.is_valid()) {
       v4l2_close(device_fd.release());
+    }
     device_fd.reset();
   }
 

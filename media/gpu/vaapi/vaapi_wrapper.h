@@ -43,11 +43,11 @@ enum class BufferFormat : uint8_t;
 class NativePixmap;
 class NativePixmapDmaBuf;
 class Rect;
-}
+}  // namespace gfx
 
 #define MAYBE_ASSERT_ACQUIRED(lock) \
   if (lock)                         \
-    lock->AssertAcquired()
+  lock->AssertAcquired()
 
 #if DCHECK_IS_ON()
 #define VAAPI_CHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker) \
@@ -563,6 +563,14 @@ class MEDIA_GPU_EXPORT VaapiWrapper
       bool& packed_sps,
       bool& packed_pps,
       bool& packed_slice);
+
+  // Queries the value of the encoding config attribute |type| for |profile|
+  // on the entrypoint this wrapper was created with. Returns false if the
+  // query fails or if the driver doesn't support the attribute, in which case
+  // |value| is left untouched.
+  [[nodiscard]] virtual bool GetEncConfigAttribute(VideoCodecProfile profile,
+                                                   VAConfigAttribType type,
+                                                   uint32_t* value);
 
   // Gets the minimum segment block size supported for AV1 encoding.
   [[nodiscard]] bool GetMinAV1SegmentSize(VideoCodecProfile profile,

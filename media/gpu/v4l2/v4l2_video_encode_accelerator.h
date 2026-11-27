@@ -25,6 +25,7 @@
 #include "media/gpu/chromeos/image_processor.h"
 #include "media/gpu/media_gpu_export.h"
 #include "media/gpu/v4l2/v4l2_device.h"
+#include "media/media_buildflags.h"
 #include "media/video/video_encode_accelerator.h"
 #include "ui/gfx/geometry/size.h"
 
@@ -243,6 +244,11 @@ class MEDIA_GPU_EXPORT V4L2VideoEncodeAccelerator
 
   // Initialize device controls with |config| or default values.
   void InitControlsVP8(const Config& config);
+
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+  // Initialize device controls with |config| or default values for HEVC.
+  bool InitControlsHEVC(const Config& config);
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
 
   // Create the buffers we need.
   bool CreateInputBuffers();

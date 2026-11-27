@@ -32,6 +32,7 @@
 #include "media/gpu/v4l2/v4l2_vda_helpers.h"
 #include "media/gpu/v4l2/v4l2_video_decoder_backend.h"
 #include "media/gpu/v4l2/v4l2_vp9_helpers.h"
+#include "media/media_buildflags.h"
 
 namespace media {
 
@@ -160,21 +161,24 @@ void V4L2StatefulVideoDecoderBackend::DoDecodeWork() {
   DVLOGF(3);
 
   // Do not decode if a flush or resolution change is in progress.
-  if (!client_->IsDecoding())
+  if (!client_->IsDecoding()) {
     return;
+  }
 
   if (need_resume_resolution_change_) {
     need_resume_resolution_change_ = false;
     ChangeResolution();
-    if (!client_->IsDecoding())
+    if (!client_->IsDecoding()) {
       return;
+    }
   }
 
   // Get a new decode request if none is in progress.
   if (!current_decode_request_) {
     // No more decode request, nothing to do for now.
-    if (decode_request_queue_.empty())
+    if (decode_request_queue_.empty()) {
       return;
+    }
 
     auto decode_request = std::move(decode_request_queue_.front());
     decode_request_queue_.pop();
@@ -208,8 +212,9 @@ void V4L2StatefulVideoDecoderBackend::DoDecodeWork() {
   if (!current_input_buffer_) {
     current_input_buffer_ = input_queue_->GetFreeBuffer();
     // We will be called again once an input buffer becomes available.
-    if (!current_input_buffer_)
+    if (!current_input_buffer_) {
       return;
+    }
 
     // Record timestamp of the input buffer so it propagates to the decoded
     // frames.
@@ -289,8 +294,9 @@ void V4L2StatefulVideoDecoderBackend::DoDecodeWork() {
   current_input_buffer_.reset();
 
   // If we can still progress on a decode request, do it.
-  if (current_decode_request_ || !decode_request_queue_.empty())
+  if (current_decode_request_ || !decode_request_queue_.empty()) {
     ScheduleDecodeWork();
+  }
 }
 
 void V4L2StatefulVideoDecoderBackend::ScheduleDecodeWork() {
@@ -315,8 +321,9 @@ void V4L2StatefulVideoDecoderBackend::OnServiceDeviceTask(bool event) {
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   DVLOGF(3);
 
-  if (event)
+  if (event) {
     ProcessEventQueue();
+  }
 
   // We can enqueue dequeued output buffers immediately.
   EnqueueOutputBuffers();
@@ -368,8 +375,9 @@ void V4L2StatefulVideoDecoderBackend::EnqueueOutputBuffers() {
 
     // Running out of V4L2 buffers is not an error, so just exit the loop
     // gracefully.
-    if (no_buffer)
+    if (no_buffer) {
       break;
+    }
 
     if (!ret) {
       LOG(ERROR) << "Error while queueing output buffer!";
@@ -414,8 +422,9 @@ void V4L2StatefulVideoDecoderBackend::ReuseOutputBufferThunk(
   DCHECK(weak_this);
 
   if (task_runner->RunsTasksInCurrentSequence()) {
-    if (*weak_this)
+    if (*weak_this) {
       (*weak_this)->ReuseOutputBuffer(std::move(buffer));
+    }
   } else {
     task_runner->PostTask(
         FROM_HERE,
@@ -493,7 +502,7 @@ void V4L2StatefulVideoDecoderBackend::OnOutputBufferDequeued(
   // The order here is important! A flush event may come after a resolution
   // change event (but not the opposite), so we must make sure both events
   // are processed in the correct order.
-  if (buffer->IsLast()){
+  if (buffer->IsLast()) {
     // Check that we don't have a resolution change event pending. If we do
     // then this LAST buffer was related to it.
     ProcessEventQueue();
@@ -534,8 +543,9 @@ bool V4L2StatefulVideoDecoderBackend::InitiateFlush(
 
   // Special case: if we haven't received any decoding request, we could
   // complete the flush immediately.
-  if (!has_pending_requests_)
+  if (!has_pending_requests_) {
     return CompleteFlush();
+  }
 
   if (output_queue_->IsStreaming()) {
     // If the CAPTURE queue is streaming, send the STOP command to the V4L2
@@ -587,8 +597,9 @@ void V4L2StatefulVideoDecoderBackend::OnStreamStopped(bool stop_input_queue) {
   DVLOGF(3);
 
   // If we are resetting, also reset the splitter.
-  if (frame_splitter_ && stop_input_queue)
+  if (frame_splitter_ && stop_input_queue) {
     frame_splitter_->Reset();
+  }
 }
 
 void V4L2StatefulVideoDecoderBackend::ChangeResolution() {
@@ -658,8 +669,9 @@ void V4L2StatefulVideoDecoderBackend::ChangeResolution() {
 
   // ...that is, unless we are not streaming yet, in which case the resolution
   // change can take place immediately.
-  if (!output_queue_->IsStreaming())
+  if (!output_queue_->IsStreaming()) {
     std::move(resolution_change_cb_).Run();
+  }
 }
 
 void V4L2StatefulVideoDecoderBackend::ContinueChangeResolution(
@@ -730,8 +742,9 @@ void V4L2StatefulVideoDecoderBackend::ClearPendingRequests(
   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
   DVLOGF(3);
 
-  if (resolution_change_cb_)
+  if (resolution_change_cb_) {
     std::move(resolution_change_cb_).Run();
+  }
 
   if (flush_cb_) {
     std::move(flush_cb_).Run(status);
@@ -759,16 +772,18 @@ bool V4L2StatefulVideoDecoderBackend::IsSupportedProfile(
   DCHECK(device_);
   if (supported_profiles_.empty()) {
     const std::vector<uint32_t> kSupportedInputFourccs = {
-        V4L2_PIX_FMT_AV1,
-        V4L2_PIX_FMT_H264,
-        V4L2_PIX_FMT_VP8,
-        V4L2_PIX_FMT_VP9,
+        V4L2_PIX_FMT_AV1,  V4L2_PIX_FMT_H264,
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+        V4L2_PIX_FMT_HEVC,
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+        V4L2_PIX_FMT_VP8,  V4L2_PIX_FMT_VP9,
     };
     auto device = base::MakeRefCounted<V4L2Device>();
     VideoDecodeAccelerator::SupportedProfiles profiles =
         device->GetSupportedDecodeProfiles(kSupportedInputFourccs);
-    for (const auto& entry : profiles)
+    for (const auto& entry : profiles) {
       supported_profiles_.push_back(entry.profile);
+    }
   }
   return base::Contains(supported_profiles_, profile);
 }

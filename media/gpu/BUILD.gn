@@ -376,6 +376,8 @@ source_set("common") {
       "h265_decoder.h",
       "h265_dpb.cc",
       "h265_dpb.h",
+      "h265_level_utils.cc",
+      "h265_level_utils.h",
     ]
   }
 
@@ -642,7 +644,10 @@ source_set("unit_tests") {
     "hrd_buffer_unittest.cc",
   ]
   if (enable_hevc_parser_and_hw_decoder) {
-    sources += [ "h265_decoder_unittest.cc" ]
+    sources += [
+      "h265_decoder_unittest.cc",
+      "h265_level_utils_unittest.cc",
+    ]
   }
   if (is_linux || is_chromeos) {
     sources += [ "buffer_validation_unittest.cc" ]

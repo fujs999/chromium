@@ -55,6 +55,11 @@
 #include "media/gpu/vaapi/vp9_vaapi_video_encoder_delegate.h"
 #include "media/gpu/vp8_reference_frame_vector.h"
 #include "media/gpu/vp9_reference_frame_vector.h"
+#include "media/media_buildflags.h"
+
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+#include "media/gpu/vaapi/h265_vaapi_video_encoder_delegate.h"
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
 
 namespace media {
 
@@ -134,8 +139,9 @@ base::AtomicRefCount VaapiVideoEncodeAccelerator::num_instances_(0);
 
 VideoEncodeAccelerator::SupportedProfiles
 VaapiVideoEncodeAccelerator::GetSupportedProfiles() {
-  if (IsConfiguredForTesting())
+  if (IsConfiguredForTesting()) {
     return supported_profiles_for_testing_;
+  }
   return VaapiWrapper::GetSupportedEncodeProfiles();
 }
 
@@ -233,10 +239,21 @@ EncoderStatus VaapiVideoEncodeAccelerator::Initialize(
   }
 
   const VideoCodec codec = VideoCodecProfileToVideoCodec(config.output_profile);
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+  const bool is_hevc = codec == VideoCodec::kHEVC;
+#else
+  const bool is_hevc = false;
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
   if (codec != VideoCodec::kH264 && codec != VideoCodec::kVP8 &&
-      codec != VideoCodec::kVP9 && codec != VideoCodec::kAV1) {
+      codec != VideoCodec::kVP9 && codec != VideoCodec::kAV1 && !is_hevc) {
     MEDIA_LOG(ERROR, media_log.get())
         << "Unsupported profile: " << GetProfileName(config.output_profile);
+    return {EncoderStatus::Codes::kEncoderInitializationError};
+  }
+
+  if (is_hevc && config.bitrate.mode() != Bitrate::Mode::kConstant) {
+    MEDIA_LOG(ERROR, media_log.get())
+        << "Only constant bitrate is supported with HEVC encoding.";
     return {EncoderStatus::Codes::kEncoderInitializationError};
   }
 
@@ -329,6 +346,12 @@ void VaapiVideoEncodeAccelerator::InitializeTask(const Config& config) {
       case VideoCodec::kAV1:
         mode = VaapiWrapper::kEncodeConstantQuantizationParameter;
         break;
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+      case VideoCodec::kHEVC:
+        // The HEVC encoder always relies on the driver rate controller.
+        mode = VaapiWrapper::kEncodeConstantBitrate;
+        break;
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
       default:
         NotifyError({EncoderStatus::Codes::kEncoderUnsupportedCodec,
                      "Unsupported codec: " + GetCodecName(output_codec_)});
@@ -398,6 +421,18 @@ void VaapiVideoEncodeAccelerator::InitializeTask(const Config& config) {
             vaapi_wrapper_, error_cb);
       }
       break;
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+    case VideoCodec::kHEVC:
+      if (!IsConfiguredForTesting()) {
+        encoder_ = std::make_unique<H265VaapiVideoEncoderDelegate>(
+            vaapi_wrapper_, error_cb);
+        // The driver rate controller is used, so neither the QP of the encoded
+        // frames is reported nor the produced bitrate can be fully trusted.
+        encoder_info_.reports_average_qp = false;
+        encoder_info_.has_trusted_rate_controller = false;
+      }
+      break;
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
     default:
       NOTREACHED() << "Unsupported codec type " << GetCodecName(output_codec_);
   }
@@ -488,8 +523,9 @@ void VaapiVideoEncodeAccelerator::RecycleEncodeScopedVASurface(
 void VaapiVideoEncodeAccelerator::TryToReturnBitstreamBuffers() {
   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
 
-  if (state_ != kEncoding)
+  if (state_ != kEncoding) {
     return;
+  }
 
   TRACE_EVENT2("media,gpu", "VAVEA::TryToReturnBitstreamBuffers",
                "pending encode results", pending_encode_results_.size(),
@@ -506,8 +542,9 @@ void VaapiVideoEncodeAccelerator::TryToReturnBitstreamBuffers() {
       continue;
     }
 
-    if (available_bitstream_buffers_.empty())
+    if (available_bitstream_buffers_.empty()) {
       return;
+    }
 
     ReturnBitstreamBuffer(*pending_encode_results_.front(),
                           available_bitstream_buffers_.front());
@@ -611,8 +648,9 @@ bool VaapiVideoEncodeAccelerator::CreateSurfacesForGpuMemoryBufferEncoding(
     return false;
   }
 
-  if (spatial_layer_resolutions.empty())
+  if (spatial_layer_resolutions.empty()) {
     return false;
+  }
 
   for (const auto& encode_size : spatial_layer_resolutions) {
     reconstructed_surfaces->push_back(
@@ -844,8 +882,9 @@ VaapiVideoEncodeAccelerator::ExecuteBlitSurface(
       *vpp_vaapi_wrapper_, encode_size,
       {VaapiWrapper::SurfaceUsageHint::kVideoProcessWrite,
        VaapiWrapper::SurfaceUsageHint::kVideoEncoder});
-  if (!blit_surface)
+  if (!blit_surface) {
     return nullptr;
+  }
 
   DCHECK(vpp_vaapi_wrapper_);
   TRACE_EVENT2("media,gpu", "VAVEA::ImageProcessor::BlitSurface",
@@ -909,6 +948,12 @@ VaapiVideoEncodeAccelerator::CreateEncodeJob(
           /*display_va_surface=*/nullptr,
           reconstructed_surface->ReleaseAsVASurfaceHandle());
       break;
+#if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+    case VideoCodec::kHEVC:
+      picture = base::MakeRefCounted<VaapiH265Picture>(
+          reconstructed_surface->ReleaseAsVASurfaceHandle());
+      break;
+#endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
     default:
       return nullptr;
   }
@@ -988,8 +1033,9 @@ void VaapiVideoEncodeAccelerator::EncodePendingInputs() {
           base::checked_cast<uint8_t>(spatial_idx), end_of_picture,
           input_surfaces[spatial_idx]->surface().id(),
           std::move(reconstructed_surfaces[spatial_idx]));
-      if (!job)
+      if (!job) {
         return;
+      }
 
       jobs.emplace_back(std::move(job));
     }
@@ -1149,8 +1195,9 @@ void VaapiVideoEncodeAccelerator::Destroy() {
   child_weak_this_factory_.InvalidateWeakPtrs();
 
   // We're destroying; cancel all callbacks.
-  if (client_ptr_factory_)
+  if (client_ptr_factory_) {
     client_ptr_factory_->InvalidateWeakPtrs();
+  }
 
   encoder_task_runner_->PostTask(
       FROM_HERE, base::BindOnce(&VaapiVideoEncodeAccelerator::DestroyTask,
@@ -1171,11 +1218,13 @@ void VaapiVideoEncodeAccelerator::DestroyTask() {
   // Clean up members that are to be accessed on the encoder thread only.
   // Call DestroyContext() explicitly to make sure it's destroyed before
   // VA surfaces.
-  if (vaapi_wrapper_)
+  if (vaapi_wrapper_) {
     vaapi_wrapper_->DestroyContext();
+  }
 
-  if (vpp_vaapi_wrapper_)
+  if (vpp_vaapi_wrapper_) {
     vpp_vaapi_wrapper_->DestroyContext();
+  }
 
   input_surfaces_.clear();
 

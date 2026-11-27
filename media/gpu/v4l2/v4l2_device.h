@@ -80,6 +80,10 @@ class MEDIA_GPU_EXPORT V4L2Device
   static int32_t VideoCodecProfileToV4L2H264Profile(VideoCodecProfile profile);
   static int32_t H264LevelIdcToV4L2H264Level(uint8_t level_idc);
 
+  // Convert required HEVC profile and level to V4L2 enums.
+  static int32_t VideoCodecProfileToV4L2HEVCProfile(VideoCodecProfile profile);
+  static int32_t HEVCLevelIdcToV4L2HEVCLevel(uint8_t level_idc);
+
   enum class Type {
     kDecoder,
     kEncoder,

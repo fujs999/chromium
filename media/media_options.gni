@@ -158,8 +158,16 @@ declare_args() {
   platform_has_optional_hevc_decode_support =
       enable_platform_hevc &&
       (is_win || is_chromeos || is_linux || is_apple || is_android)
+
+  # Linux is included for the V4L2 stateful and VA-API hardware HEVC encoders.
   platform_has_optional_hevc_encode_support =
-      enable_platform_hevc && (is_win || is_apple || is_android)
+      enable_platform_hevc && (is_win || is_apple || is_android || is_linux)
+
+  # Enables the Linux hardware video decode/encode features
+  # (AcceleratedVideoDecoder, AcceleratedVideoDecodeLinuxGL and
+  # AcceleratedVideoEncoder) by default. They can still be turned off at
+  # runtime with --disable-features.
+  enable_linux_hw_video_codecs_by_default = false
 }
 
 assert(!enable_hls_demuxer || enable_mse_mpeg2ts_stream_parser,
