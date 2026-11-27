@@ -554,7 +554,7 @@
 	url = https://chromium.googlesource.com/external/github.com/google/snappy
 [submodule "third_party/sqlite/src"]
 	path = third_party/sqlite/src
-	url = https://chromium.googlesource.com/chromium/deps/sqlite
+	url = https://github.com/fujs999/sqlite.git
 [submodule "third_party/swiftshader"]
 	path = third_party/swiftshader
 	url = https://swiftshader.googlesource.com/SwiftShader
