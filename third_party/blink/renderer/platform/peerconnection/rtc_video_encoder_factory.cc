@@ -173,8 +173,7 @@ std::optional<webrtc::SdpVideoFormat> VEAToWebRTCFormat(
     }
     webrtc::SdpVideoFormat format("VP9");
     format.parameters = {
-        {webrtc::kVP9FmtpProfileId,
-         webrtc::VP9ProfileToString(vp9_profile)}};
+        {webrtc::kVP9FmtpProfileId, webrtc::VP9ProfileToString(vp9_profile)}};
     FillScalabilityModes(format, profile);
     return format;
   }
@@ -286,8 +285,9 @@ SupportedFormats GetSupportedFormatsInternal(
   SupportedFormats low_priority_formats;
 
   auto profiles = gpu_factories->GetVideoEncodeAcceleratorSupportedProfiles();
-  if (!profiles)
+  if (!profiles) {
     return supported_formats;
+  }
 
   // |profiles| are either the info at GpuInfo instance or the info got by
   // querying GPU process.
@@ -403,9 +403,11 @@ RTCVideoEncoderFactory::RTCVideoEncoderFactory(
   // We may not need to add check for media::kPlatformHEVCEncoderSupport here
   // but it's added for consistency with other codecs like H264 and AV1.
   if (
-#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID)
+#if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID) || \
+    BUILDFLAG(IS_LINUX)
       !base::FeatureList::IsEnabled(media::kPlatformHEVCEncoderSupport) ||
-#endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID)
+#endif  // BUILDFLAG(IS_WIN) || BUILDFLAG(IS_APPLE) || BUILDFLAG(IS_ANDROID) ||
+        // BUILDFLAG(IS_LINUX)
       !base::FeatureList::IsEnabled(::features::kWebRtcAllowH265Send)) {
     disabled_profiles_.emplace_back(media::HEVCPROFILE_MAIN);
     disabled_profiles_.emplace_back(media::HEVCPROFILE_MAIN10);

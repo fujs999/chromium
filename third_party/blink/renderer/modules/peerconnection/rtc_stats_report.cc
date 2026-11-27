@@ -12,6 +12,7 @@
 #include "base/feature_list.h"
 #include "base/notreached.h"
 #include "base/numerics/safe_conversions.h"
+#include "media/media_buildflags.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/renderer/bindings/core/v8/script_value.h"
 #include "third_party/blink/renderer/bindings/core/v8/v8_object_builder.h"
@@ -64,19 +65,32 @@ v8::Local<v8::Value> HashMapToValue(ScriptState* script_state,
   return v8_object;
 }
 
+#if !BUILDFLAG(ENABLE_LINUX_HW_VIDEO_CODECS_BY_DEFAULT)
 bool IsCapturing(LocalDOMWindow* window) {
   UserMediaClient* user_media_client = UserMediaClient::From(window);
   return user_media_client && user_media_client->IsCapturing();
 }
+#endif
 
 bool ExposeHardwareCapabilityStats(ScriptState* script_state) {
   // According the the spec description at
   // https://w3c.github.io/webrtc-stats/#dfn-exposing-hardware-is-allowed,
   // hardware capabilities may be exposed if the context capturing state is
   // true.
+  //
+  // Product builds that enable Linux hardware video codecs also expose the
+  // fields. The in-page H.265 loopback reads encoderImplementation and
+  // powerEfficientEncoder from getStats(), and this Electron page does not
+  // satisfy the capturing-state check for either a camera track or a canvas
+  // track. Other builds keep the capturing-state gate.
+#if BUILDFLAG(ENABLE_LINUX_HW_VIDEO_CODECS_BY_DEFAULT)
+  (void)script_state;
+  return true;
+#else
   ExecutionContext* ctx = ExecutionContext::From(script_state);
   LocalDOMWindow* window = DynamicTo<LocalDOMWindow>(ctx);
   return window && IsCapturing(window);
+#endif
 }
 
 RTCCodecStats* ToV8Stat(ScriptState* script_state,
