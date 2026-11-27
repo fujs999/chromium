@@ -551,12 +551,13 @@ bool GpuInit::InitializeAndStartSandbox(base::CommandLine* command_line,
   gpu_info_.passthrough_cmd_decoder =
       gpu_preferences_.use_passthrough_cmd_decoder;
 #else
-  // If gl is disabled passthrough/validating command decoder doesn't matter. If
-  // it's not ensure that passthrough command decoder is supported as it's our
-  // only option.
+  // Passthrough is the only decoder when the validating decoder is not
+  // compiled in, except native EGL GLES2. Passthrough requires ANGLE and
+  // aborts on EGL GLES2. Linux still links GLES2DecoderImpl for that case.
   if (!gl_disabled) {
-    gpu_info_.passthrough_cmd_decoder = true;
-    gpu_preferences_.use_passthrough_cmd_decoder = true;
+    const bool native_egl = impl.gl == gl::kGLImplementationEGLGLES2;
+    gpu_info_.passthrough_cmd_decoder = !native_egl;
+    gpu_preferences_.use_passthrough_cmd_decoder = !native_egl;
   }
 #endif  // BUILDFLAG(ENABLE_VALIDATING_COMMAND_DECODER)
 
