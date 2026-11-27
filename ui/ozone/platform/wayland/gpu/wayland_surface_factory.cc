@@ -211,6 +211,8 @@ WaylandSurfaceFactory::GetAllowedGLImplementations() {
     impls.emplace_back(gl::ANGLEImplementation::kOpenGLES);
     impls.emplace_back(gl::ANGLEImplementation::kSwiftShader);
     impls.emplace_back(gl::ANGLEImplementation::kVulkan);
+    // Allow --use-gl=egl to select native EGL GLES2 alongside ANGLE.
+    impls.emplace_back(gl::kGLImplementationEGLGLES2);
   }
   return impls;
 }

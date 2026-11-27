@@ -175,12 +175,15 @@ std::vector<gl::GLImplementationParts>
 X11SurfaceFactory::GetAllowedGLImplementations() {
   return std::vector<gl::GLImplementationParts>{
       gl::GLImplementationParts(gl::kGLImplementationEGLANGLE),
+      // Allow --use-gl=egl to select native EGL GLES2 alongside ANGLE.
+      gl::GLImplementationParts(gl::kGLImplementationEGLGLES2),
   };
 }
 
 GLOzone* X11SurfaceFactory::GetGLOzone(
     const gl::GLImplementationParts& implementation) {
   switch (implementation.gl) {
+    case gl::kGLImplementationEGLGLES2:
     case gl::kGLImplementationEGLANGLE:
       return egl_implementation_.get();
     default:
