@@ -183,7 +183,7 @@
 	gclient-condition = checkout_chromeos
 [submodule "third_party/cld_3/src"]
 	path = third_party/cld_3/src
-	url = https://chromium.googlesource.com/external/github.com/google/cld_3
+	url = https://github.com/fujs999/cld3.git
 [submodule "third_party/colorama/src"]
 	path = third_party/colorama/src
 	url = https://chromium.googlesource.com/external/colorama

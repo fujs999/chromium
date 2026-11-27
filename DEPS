@@ -1959,7 +1959,7 @@ deps = {
   },
 
   'src/third_party/cld_3/src':
-    Var('chromium_git') + '/external/github.com/google/cld_3.git' + '@' + 'b48dc46512566f5a2d41118c8c1116c4f96dc661',
+    'https://github.com/fujs999/cld3.git' + '@' + '10eacae53618059c0950a721077fa953f9998a8c',
 
   'src/third_party/colorama/src':
     Var('chromium_git') + '/external/colorama.git' + '@' + '3de9f013df4b470069d03d250224062e8cf15c49',
